@@ -69,9 +69,9 @@ Vylepšovat appku můžeš ty, já i učitel – klidně s pomocí AI asistenta.
 ### Známé problémy alpha verze
 
 - První start na čistém PC trvá minuty (instalace OmniRoute); další starty jsou rychlé.
-- Free limity se sdílí na jedné IP – ve třídě pomáhají jen vlastní klíče.
 - Nabídka free modelů u poskytovatelů se mění; měření se proto pravidelně opakují.
 - Některé texty a hlášky jsou zatím jen česky.
+- Console často hlásí error, ale není to vždy pravda
 
 ## Licence
 

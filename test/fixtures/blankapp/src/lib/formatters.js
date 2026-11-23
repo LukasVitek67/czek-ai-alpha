@@ -1,0 +1,9 @@
+export function formatDuration(sec) {
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+export function formatQuality(track) {
+  return `${track.format.toUpperCase()} ${track.bits}-bit / ${track.rate / 1000} kHz`;
+}

@@ -1,0 +1,13 @@
+{
+  "note": "Měření ze starších benchmarků ve starém formátu (bez polí at/fixture), přepsaná ručně z výsledků a komentářů. tools/model-evidence.js je slučuje s novými výsledky. Vyprší po MAX_AGE_DAYS jako všechno ostatní.",
+  "records": [
+    { "key": "glyph-cluster", "ok": true, "wallS": null, "fixture": "bugfix-5files", "at": "2026-11-08T12:00:00Z", "source": "test/capture-opencode.js bugfix (8/8, 6 kroků), komentář src/providers.js" },
+    { "key": "beam-free", "ok": true, "wallS": null, "fixture": "bugfix-5files", "at": "2026-11-08T12:00:00Z", "source": "test/capture-opencode.js bugfix (8/8, 13 kroků)" },
+    { "key": "nemotron-3-ultra-550b-a55b", "ok": true, "wallS": null, "fixture": "bugfix-5files", "at": "2026-11-08T12:00:00Z", "source": "test/capture-opencode.js bugfix (8/8, 11–15 kroků)" },
+    { "key": "north-mini-code", "ok": false, "wallS": null, "fixture": "bugfix-5files", "at": "2026-11-08T12:00:00Z", "source": "test/capture-opencode.js bugfix (2/8, vzdal to)" },
+    { "key": "gemini-3.6-flash", "ok": true, "wallS": 199.4, "fixture": "feature", "at": "2026-11-19T20:00:00Z", "source": "docs/research/2026-11-19-audit/results/feature-0.15.17-gemini-3-6-flash.json" },
+    { "key": "gemini-3-flash-preview", "ok": true, "wallS": 235.4, "fixture": "feature", "at": "2026-11-19T20:00:00Z", "source": "docs/research/2026-11-19-audit/results/feature-0.15.17-gemini-3-flash-preview.json" },
+    { "key": "glm-4.5-flash", "ok": false, "wallS": 484.6, "fixture": "feature", "at": "2026-11-19T20:00:00Z", "source": "docs/research/2026-11-19-audit/results/feature-0.15.17-glm-4-5-flash.json (13/15)" },
+    { "key": "nemotron-3-ultra-550b-a55b", "ok": true, "wallS": 119.6, "fixture": "feature", "at": "2026-11-19T20:00:00Z", "source": "docs/research/2026-11-19-audit/results/feature-0.15.17-zdarma-max.json (tier Max, vyhrával Nemotron)" }
+  ]
+}

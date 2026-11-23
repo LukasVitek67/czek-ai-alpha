@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'none'">
+  <title>Monitor</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    html, body { height: 100%; }
+    body { display: flex; flex-direction: column; margin: 0; background: var(--bg); }
+    .mo-top { padding: 14px 24px 10px; border-bottom: 1px solid var(--rule); display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap; }
+    .mo-top h1 { font-size: 18px; font-weight: 600; margin: 0; }
+    .mo-sum { font-size: 13px; font-weight: 600; }
+    .mo-sum.ok { color: var(--accent); }
+    .mo-sum.bad { color: var(--err); }
+    .mo-when { font-size: 12px; color: var(--muted); }
+    .mo-bar { margin-left: auto; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12.5px; }
+    .mo-body { flex: 1; overflow-y: auto; padding: 4px 24px 40px; }
+    h2 { font-size: 12.5px; color: var(--muted); font-weight: 600; margin: 22px 0 6px; }
+    table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+    th { text-align: left; font-weight: 600; color: var(--muted); padding: 4px 8px 4px 0; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+    td { padding: 4px 8px 4px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    td.mono { font-family: var(--mono); font-size: 12px; word-break: break-all; }
+    td.wrap { max-width: 420px; }
+    .ok { color: var(--accent); }
+    .warn { color: var(--warn); }
+    .err { color: var(--err); }
+    .muted { color: var(--muted); }
+    .empty { color: var(--muted); font-size: 12.5px; padding: 4px 0; }
+    ul.alerts { margin: 0; padding: 0; list-style: none; font-size: 13px; }
+    ul.alerts li { padding: 4px 0; border-bottom: 1px solid var(--rule); }
+    ul.alerts li b { display: inline-block; min-width: 76px; }
+    tr.call { cursor: pointer; }
+    tr.call:hover, tr.call.open { background: var(--sel); }
+    .detail { padding: 10px 0 16px; border-bottom: 1px solid var(--rule); font-size: 12.5px; }
+    .detail h3 { font-size: 12px; color: var(--muted); font-weight: 600; margin: 12px 0 4px; }
+    .detail h3:first-child { margin-top: 0; }
+    .msg { border-left: 2px solid var(--rule); padding: 2px 0 2px 8px; margin: 6px 0; }
+    .msg .role { font-weight: 600; font-size: 11.5px; color: var(--muted); }
+    pre.txt { margin: 2px 0 0; white-space: pre-wrap; word-break: break-word; font-family: var(--mono); font-size: 11.5px; background: var(--code); padding: 6px 8px; border-radius: 4px; max-height: 320px; overflow: auto; }
+    details > summary { cursor: pointer; }
+    .tag { font-size: 11px; border: 1px solid var(--rule); border-radius: 4px; padding: 0 5px; margin-right: 4px; white-space: nowrap; }
+    .tag.err { border-color: var(--err); }
+    .tag.warn { border-color: var(--warn); }
+  </style>
+</head>
+<body>
+  <div class="mo-top">
+    <h1 data-i18n="mon.title">Monitor</h1>
+    <span class="mo-sum" id="sum"></span>
+    <span class="mo-when" id="when"></span>
+    <div class="mo-bar">
+      <label><input type="checkbox" id="fulllog"> <span data-i18n="mon.fullLog">Úplný log a záznam volání</span></label>
+      <button class="btn small" id="b-logs" data-i18n="mon.openLogs">Otevřít logy</button>
+      <button class="btn small" id="b-calls" data-i18n="mon.openCalls">Záznam volání</button>
+      <button class="btn small" id="b-report" data-i18n="mon.report">Report o výkonu</button>
+      <button class="btn small" id="b-copy" data-i18n="mon.copy">Kopírovat stav</button>
+    </div>
+  </div>
+  <div class="mo-body">
+    <h2 data-i18n="mon.alerts">Upozornění</h2>
+    <ul class="alerts" id="alerts"></ul>
+
+    <h2 data-i18n="mon.components">Součásti</h2>
+    <table id="components"><thead><tr><th data-i18n="mon.col.part">Součást</th><th data-i18n="mon.col.state">Stav</th><th data-i18n="mon.col.detail">Podrobnosti</th></tr></thead><tbody></tbody></table>
+
+    <h2 data-i18n="mon.active">Právě běží</h2>
+    <table id="active"><thead><tr><th data-i18n="mon.col.combo">Model / tier</th><th data-i18n="mon.col.kind">Druh</th><th class="num" data-i18n="mon.col.running">Běží</th><th data-i18n="mon.col.runners">Závodníci</th></tr></thead><tbody></tbody></table>
+
+    <h2 data-i18n="mon.models">Modely za poslední hodinu</h2>
+    <table id="models"><thead><tr>
+      <th data-i18n="mon.col.model">Model</th><th data-i18n="mon.col.state">Stav</th><th class="num" data-i18n="mon.col.calls">Pokusů</th><th class="num" data-i18n="mon.col.okPct">Úspěch</th>
+      <th class="num" data-i18n="mon.col.fail">Selhání</th><th class="num" data-i18n="mon.col.aborted">Zrušeno</th><th class="num" data-i18n="mon.col.median">Medián odpovědi</th>
+      <th class="num" data-i18n="mon.col.ttft">Do 1. odpovědi</th><th class="num" data-i18n="mon.col.tps">Tokeny/s</th><th class="num" data-i18n="mon.col.wins">Výhry</th><th data-i18n="mon.col.lastErr">Poslední chyba</th>
+    </tr></thead><tbody></tbody></table>
+
+    <h2 data-i18n="mon.calls">Poslední volání (klikni pro celý obsah)</h2>
+    <table id="calls"><thead><tr>
+      <th data-i18n="mon.col.time">Čas</th><th data-i18n="mon.col.kind">Druh</th><th data-i18n="mon.col.model">Model</th><th class="num" data-i18n="mon.col.ttft">Do 1. odpovědi</th>
+      <th class="num" data-i18n="mon.col.total">Celkem</th><th class="num" data-i18n="mon.col.out">Výstup</th><th class="num" data-i18n="mon.col.tps">Tokeny/s</th>
+      <th data-i18n="mon.col.finish">Konec</th><th data-i18n="mon.col.tools">Nástroje</th><th data-i18n="mon.col.error">Chyba</th>
+    </tr></thead><tbody></tbody></table>
+
+    <h2 data-i18n="mon.sessions">Relace OpenCode</h2>
+    <table id="sessions"><thead><tr>
+      <th data-i18n="mon.col.session">Relace</th><th data-i18n="mon.col.dir">Složka</th><th data-i18n="mon.col.state">Stav</th><th class="num" data-i18n="mon.col.steps">Kroků</th>
+      <th data-i18n="mon.col.model">Model</th><th class="num" data-i18n="mon.col.tokens">Tokeny (vstup / výstup)</th><th data-i18n="mon.col.errors">Chyby</th>
+    </tr></thead><tbody></tbody></table>
+
+    <h2 data-i18n="mon.guard">Zásahy czek-guard</h2>
+    <table id="guard"><thead><tr><th data-i18n="mon.col.time">Čas</th><th data-i18n="mon.col.kind">Druh</th><th data-i18n="mon.col.detail">Podrobnosti</th></tr></thead><tbody></tbody></table>
+  </div>
+  <script src="../i18n.js"></script>
+  <script src="monitor.js"></script>
+</body>
+</html>

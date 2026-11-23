@@ -1,0 +1,85 @@
+czek-ai
+=======
+
+Programovací agent OpenCode napojený na OmniRoute, který směruje dotazy
+na modely zdarma od mnoha poskytovatelů. czek-ai obojí nastaví a spustí.
+
+Tento balíček neobsahuje žádné API klíče. Každý si přidá vlastní.
+
+
+Instalace (Windows 10/11)
+-------------------------
+1. Spusť czek-ai.exe. Nic dalšího instalovat nemusíš.
+   Nebo czek-ai-setup.exe: nainstaluje se jednou (asi 20 s, bez práv
+   správce, zástupce na ploše) a pak startuje za 2 s místo asi 20 s.
+   czek-ai.exe se totiž při každém spuštění celá rozbaluje.
+
+Co na počítači chybí, si czek-ai při prvním startu stáhne sama do své
+složky (%APPDATA%\czek-ai), bez práv správce a bez zásahu do systému.
+Vždy oficiální verze ověřené kontrolním součtem:
+- OpenCode (agent), asi 75 MB, a Git Bash (příkazy agenta), asi 60 MB.
+  Průběh je vidět v úvodním okně, trvá to asi minutu.
+- OmniRoute (chytré směrování modelů) a podle potřeby Node.js, asi 2,7 GB na disku.
+  Instaluje se asi 7 minut (průběh je v úvodním okně, appku během
+  instalace nezavírej). Mezitím se sám otevře Průvodce klíči: založ si
+  účty a vlož klíče, než instalace doběhne. Pak se otevře okno agenta.
+
+Celá třída najednou (doporučeno ve škole)
+-----------------------------------------
+Každý student by si jinak při prvním startu stáhl asi 1,3 GB, tedy 30 studentů
+asi 39 GB přes školní síť. Místo toho učitel jednou:
+1. Dá czek-ai.exe a Pripravit-tridu.cmd do jedné složky (sdílený disk, flashka).
+2. Spustí Pripravit-tridu.cmd (asi 15 minut, potřebuje internet). Vedle exe
+   vznikne složka czek-ai-cache (asi 3 GB, s hotovým OmniRoute v archivu).
+3. Studenti spouští czek-ai.exe z té složky (nebo si zkopírují exe i složku
+   czek-ai-cache k sobě). Instalace pak jde ze složky, ne z internetu,
+   a OmniRoute se jen rozbalí (asi 4 minuty místo 6-7).
+   Funguje i s czek-ai-setup.exe položeným vedle složky czek-ai-cache.
+Každý soubor ze složky se před použitím ověří stejným kontrolním součtem jako
+stažený. Co ve složce chybí nebo nesedí, stáhne czek-ai normálně.
+
+Instalace.cmd už není potřeba (hodí se jen, když chceš Node.js, Git,
+OpenCode a OmniRoute mít nainstalované v systému pro jiné programy).
+
+czek-ai posílá anonymní statistiky modelů (jen název modelu, počet povedených
+a nepovedených volání a dobu odpovědi; žádné dotazy, klíče ani jména) na veřejný
+tierlist https://czek-ai-tierlist.vercel.app. Modely, které jinde nefungují, pak
+odsune dozadu. Vypnout: menu czek-ai -> Posílat anonymní statistiky modelů.
+
+Windows může u czek-ai.exe ukázat varování SmartScreen (aplikace není
+podepsaná). Zvol "Další informace" a "Přesto spustit".
+
+
+Klíče k modelům
+---------------
+Bez klíčů fungují jen poskytovatelé, kteří klíč nechtějí (Kilo, OVH,
+LLM7, Pollinations). Limit mají na IP adresu a ve škole ho sdílí celá
+třída, takže bez vlastních klíčů agent skoro hned narazí. Proto:
+
+1. Při prvním startu se sám otevře Průvodce klíči (jinak menu czek-ai
+   -> Průvodce klíči, nebo Ctrl+, a stránka "Průvodce klíči").
+2. U každé služby klikni na "Otevřít stránku", zaregistruj se zdarma
+   a zkopíruj klíč.
+3. Klíč vlož do pole a dej "Uložit a ověřit". Průvodce hned zkusí
+   dotaz na model. Když vložíš klíč jiné služby, uloží ho tam, kam
+   patří.
+
+Stačí 3 klíče (doporučeno NVIDIA, OpenRouter, Z.ai). Google Gemini jen
+od 18 let. Klíče se ukládají jen na tvém počítači, šifrované přes Windows.
+
+
+Používání
+---------
+- Vyber složku projektu (jeden projekt = jedna složka).
+- V nabídce modelů nech "auto/coding". OmniRoute sám vybírá model,
+  který zrovna funguje, a při limitu přepne na další.
+- Free modely jsou slabší než placené. Zadávej menší, konkrétní úkoly.
+
+
+Kde jsou data
+-------------
+Nastavení a klíče:   %APPDATA%\czek-ai (stažené nástroje: opencode-bin, git,
+                     node, omniroute-app)
+Konfigurace OpenCode: %USERPROFILE%\.config\opencode
+Odinstalace: smaž czek-ai.exe a tyto dvě složky, případně
+"npm uninstall -g opencode-ai omniroute".

@@ -1,0 +1,14 @@
+{
+  "note": "Kandidáti, které tools/model-evidence-weekly.sh každý týden změří přímo (bench-e2e, úloha bugfix). O pořadí rozhoduje měření, ne tento seznam. Nový free model sem stačí přidat.",
+  "fixture": "bugfix",
+  "candidates": [
+    ["openrouter", "particle-ai/particle-1:free"],
+    ["openrouter", "baidu/ernie-5.5-flash-preview:free"],
+    ["kilo", "nvidia/nemotron-3-ultra-550b-a55b:free"],
+    ["nvidia", "moonshotai/kimi-k3.1-pro"],
+    ["nvidia", "z-ai/glm-5.3-flash"],
+    ["gemini", "gemini-3.8-flash"],
+    ["zai", "glm-4.7-flash"],
+    ["mistral", "devstral-latest"]
+  ]
+}

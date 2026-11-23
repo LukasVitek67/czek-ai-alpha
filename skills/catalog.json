@@ -1,0 +1,682 @@
+{
+  "version": 1,
+  "groups": [
+    {
+      "id": "visual",
+      "title": "Největší vizuální dopad"
+    },
+    {
+      "id": "3d",
+      "title": "Silný dopad: 3D a pokročilé efekty"
+    },
+    {
+      "id": "motion",
+      "title": "Střední dopad: animace a interakce"
+    },
+    {
+      "id": "niche",
+      "title": "Specializované"
+    },
+    {
+      "id": "work",
+      "title": "Optimalizace práce"
+    }
+  ],
+  "sources": {
+    "impeccable": {
+      "url": "https://github.com/pbakaus/impeccable",
+      "license": "Apache-2.0"
+    },
+    "uipro": {
+      "url": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill",
+      "license": "MIT"
+    },
+    "design": {
+      "url": "https://github.com/freshtechbro/claudedesignskills",
+      "license": "MIT"
+    },
+    "caveman": {
+      "url": "https://github.com/juliusbrussee/caveman",
+      "license": "Apache-2.0"
+    },
+    "memory": {
+      "url": "https://github.com/russbeye/claude-memory-bank",
+      "license": "MIT"
+    },
+    "zdarma": {
+      "url": "",
+      "license": "součást Zdarmy"
+    },
+    "adhd": {
+      "url": "https://github.com/ayghri/i-have-adhd",
+      "license": "MIT"
+    }
+  },
+  "skills": [
+    {
+      "name": "ui-ux-pro-max",
+      "group": "visual",
+      "impact": 100,
+      "badge": "design",
+      "source": "uipro",
+      "summary": "kompletní design systém: styly, palety, fonty, UX pravidla, 22 technologií",
+      "what": "Prohledávatelná databáze designu: desítky stylů, 192 palet podle typu produktu, 74 párování fontů, 119 UX pravidel, ikony, grafy a pravidla pro konkrétní stack (React, Next.js, Tailwind, Flutter, SwiftUI…). Z popisu produktu sestaví celý design systém.",
+      "when": [
+        "Začínáš nový web nebo aplikaci a nemáš vizuální směr.",
+        "Chceš paletu a fonty, které k produktu sedí, ne náhodné.",
+        "Kontrola UI proti UX pravidlům (přístupnost, hierarchie, responzivita)."
+      ],
+      "examples": [
+        "Použij ui-ux-pro-max a navrhni design systém pro lossless hudební přehrávač: paleta, fonty, rozestupy, komponenty.",
+        "Zkontroluj tuhle stránku podle UX pravidel z ui-ux-pro-max a oprav, co porušuje.",
+        "Vyber pro tenhle dashboard vhodný typ grafu a styl."
+      ],
+      "needs": "Python 3 (na tomhle počítači je). Skill spouští vlastní vyhledávací skript, nic dalšího se neinstaluje."
+    },
+    {
+      "name": "impeccable",
+      "group": "visual",
+      "impact": 96,
+      "badge": "design",
+      "source": "impeccable",
+      "summary": "audit a doladění UI: anti-vzory, typografie, hierarchie, stavy",
+      "what": "Profesionální designové oko pro frontend. Umí audit, kritiku, doladění (polish), zjednodušení, zpevnění okrajových stavů, animace, typografii, barvy i dokumentaci design systému. Navazuje na původní skill frontend-design od Anthropicu.",
+      "when": [
+        "UI funguje, ale vypadá obyčejně nebo „jako od AI“.",
+        "Před vydáním: audit vzhledu, přístupnosti a okrajových stavů.",
+        "Potřebuješ rozhraní výraznější (bolder) nebo naopak klidnější (quieter)."
+      ],
+      "examples": [
+        "Použij impeccable a udělej audit celého UI, pak oprav nejhorší problémy.",
+        "impeccable polish na stránku nastavení: typografie, rozestupy, prázdné a chybové stavy.",
+        "Udělej tenhle dashboard klidnější a čitelnější podle impeccable."
+      ],
+      "needs": "Při prvním použití si stáhne svůj pomocný program z GitHubu autora (bez dalších závislostí)."
+    },
+    {
+      "name": "unslop-ui",
+      "group": "visual",
+      "impact": 92,
+      "badge": "design",
+      "source": "zdarma",
+      "summary": "pojistka proti „AI vzhledu“: žádné glow gradienty, karty všude, emoji",
+      "what": "Krátký seznam zakázaných znaků generického AI designu (neonové gradienty, všechno v kartách, ikonové dlaždice, eyebrow popisky, emoji, výplňový text) a co dělat místo nich. Aktivuje se při každé práci na UI.",
+      "when": [
+        "Kdykoli agent tvoří nebo předělává rozhraní.",
+        "Výsledek vypadá jako šablona a chceš ho „odslopit“."
+      ],
+      "examples": [
+        "Projdi tuhle stránku podle unslop-ui a odstraň všechno, co působí jako generovaný template.",
+        "Navrhni landing page, ale dodrž unslop-ui."
+      ],
+      "needs": ""
+    },
+    {
+      "name": "app-debugging",
+      "group": "visual",
+      "impact": 90,
+      "badge": "debug",
+      "source": "zdarma",
+      "summary": "aplikace se nespustí nebo má prázdné/černé okno: přečíst skutečnou chybu z konzole okna",
+      "what": "Pevný postup pro Tauri, Electron a WebView2 aplikace, které se nespustí, mají prázdné okno nebo hned spadnou: spustit odpojeně s ladicím portem, přečíst chyby z konzole okna přibaleným skriptem (cdp-console.cjs) a opravit tu jednu příčinu. Zakazuje smyčky typu znovu spustit, zabít, znovu sestavit.",
+      "when": [
+        "Okno aplikace je černé nebo bílé a nic v něm není.",
+        "Aplikace se nespustí nebo hned spadne.",
+        "Agent pořád dokola spouští a zabíjí aplikaci a nic nezjistí."
+      ],
+      "examples": [
+        "Aplikace má černé okno. Použij app-debugging a zjisti skutečnou chybu z konzole.",
+        "Použij app-debugging: po spuštění se nic nezobrazí, oprav to."
+      ],
+      "needs": "Node.js 22+ a Chrome nebo Edge. Skript otevře sestavený frontend (--dist ./dist) nebo dev server (--url) v neviditelném prohlížeči a vypíše chybu, kvůli které je okno prázdné. Aplikaci kvůli tomu není potřeba restartovat."
+    },
+    {
+      "name": "modern-web-design",
+      "group": "visual",
+      "impact": 90,
+      "badge": "design",
+      "source": "design",
+      "summary": "trendy 2024–25, micro-interakce, design systémy, přístupnost",
+      "what": "Principy a vzory moderního webového designu: aktuální trendy, micro-interakce, design systémy, přístupnost a výkon (performance-first).",
+      "when": [
+        "Navrhuješ nový web a chceš, aby působil současně.",
+        "Doplnění micro-interakcí a přístupnosti do existujícího webu."
+      ],
+      "examples": [
+        "Podle modern-web-design navrhni hero sekci a navigaci pro tenhle web.",
+        "Přidej do formuláře vhodné micro-interakce a ověř přístupnost."
+      ],
+      "needs": ""
+    },
+    {
+      "name": "motion-framer",
+      "group": "visual",
+      "impact": 85,
+      "badge": "animace",
+      "source": "design",
+      "summary": "animace v Reactu (Motion / Framer Motion): gesta, layout, přechody",
+      "what": "Animační knihovna Motion (dříve Framer Motion) pro React i čisté JS: motion komponenty, varianty, gesta (hover, tap, drag), layout animace, odchodové animace (AnimatePresence), pružiny a scroll efekty.",
+      "when": [
+        "React aplikace potřebuje plynulé přechody a reakce na gesta.",
+        "Animace při změně layoutu nebo při odchodu prvků."
+      ],
+      "examples": [
+        "Pomocí motion-framer přidej animaci otevírání a zavírání postranního panelu.",
+        "Seznam skladeb: animované přeuspořádání při změně řazení (layout animation)."
+      ],
+      "needs": "Projekt v Reactu nebo JS; balíček motion nainstaluje agent do projektu."
+    },
+    {
+      "name": "gsap-scrolltrigger",
+      "group": "visual",
+      "impact": 82,
+      "badge": "animace",
+      "source": "design",
+      "summary": "GSAP a ScrollTrigger: scroll animace, parallax, pinning, scrubbing",
+      "what": "GSAP (GreenSock) a plugin ScrollTrigger: tweeny, timeline, animace řízené scrollem, připínání sekcí (pinning), scrubbing a parallax.",
+      "when": [
+        "Prezentační stránka, kde se obsah animuje podle scrollu.",
+        "Složité časované sekvence animací."
+      ],
+      "examples": [
+        "Pomocí gsap-scrolltrigger připni sekci s produktem a animuj ji podle scrollu.",
+        "Udělej parallax pozadí v hero sekci."
+      ],
+      "needs": "Balíček gsap do projektu."
+    },
+    {
+      "name": "threejs-webgl",
+      "group": "3d",
+      "impact": 78,
+      "badge": "3D",
+      "source": "design",
+      "summary": "3D scény, WebGL/WebGPU, shadery, konfigurátory",
+      "what": "Three.js pro 3D na webu: scény, kamery, světla, materiály, shadery, načítání modelů, produktové konfigurátory a vizualizace.",
+      "when": [
+        "3D scéna nebo model přímo na stránce.",
+        "Vlastní shader nebo vizualizace dat ve 3D."
+      ],
+      "examples": [
+        "Pomocí threejs-webgl udělej rotující 3D model sluchátek s osvětlením a ovládáním myší.",
+        "Přidej do pozadí jednoduchý shader s pomalým vlněním."
+      ],
+      "needs": "Balíček three do projektu."
+    },
+    {
+      "name": "react-three-fiber",
+      "group": "3d",
+      "impact": 75,
+      "badge": "3D",
+      "source": "design",
+      "summary": "3D v Reactu: Three.js přes komponenty a hooky",
+      "what": "React Three Fiber (R3F): Three.js deklarativně jako React komponenty, se stavem a znovupoužitelnými abstrakcemi. Ideální pro produktové konfigurátory.",
+      "when": [
+        "React aplikace, která potřebuje 3D.",
+        "Chceš 3D scénu skládat z komponent."
+      ],
+      "examples": [
+        "Pomocí react-three-fiber udělej konfigurátor barvy produktu ve 3D.",
+        "Převeď tuhle Three.js scénu na komponenty R3F."
+      ],
+      "needs": "React projekt; balíčky @react-three/fiber a three."
+    },
+    {
+      "name": "animated-component-libraries",
+      "group": "3d",
+      "impact": 72,
+      "badge": "animace",
+      "source": "design",
+      "summary": "hotové animované komponenty: Magic UI, React Bits",
+      "what": "Sbírky hotových animovaných React komponent: Magic UI (150+ komponent na TypeScript/Tailwind/Motion) a React Bits (90+ s minimem závislostí).",
+      "when": [
+        "Landing page nebo dashboard, kde chceš rychle efektní prvky.",
+        "Nechceš animace psát od nuly."
+      ],
+      "examples": [
+        "Najdi v animated-component-libraries vhodnou animovanou komponentu pro výpis funkcí a použij ji.",
+        "Přidej animované číslo (counter) do statistik."
+      ],
+      "needs": "React a Tailwind projekt."
+    },
+    {
+      "name": "spline-interactive",
+      "group": "3d",
+      "impact": 68,
+      "badge": "3D",
+      "source": "design",
+      "summary": "interaktivní 3D scény ze Spline bez programování 3D",
+      "what": "Spline je 3D editor v prohlížeči; skill radí, jak scény navrhnout, animovat a vložit do webu nebo Reactu.",
+      "when": [
+        "Chceš 3D prvek navržený vizuálně, ne kódem.",
+        "Prototyp 3D UI."
+      ],
+      "examples": [
+        "Jak vložit moji Spline scénu do Next.js stránky a reagovat na kliknutí?",
+        "Pomocí spline-interactive připrav hero sekci se 3D objektem ze Spline."
+      ],
+      "needs": "Účet na spline.design pro tvorbu scén."
+    },
+    {
+      "name": "locomotive-scroll",
+      "group": "3d",
+      "impact": 65,
+      "badge": "scroll",
+      "source": "design",
+      "summary": "hladké scrollování, parallax, detekce viewportu",
+      "what": "Knihovna Locomotive Scroll: plynulé scrollování, parallax, detekce prvků ve viewportu a animace řízené scrollem.",
+      "when": [
+        "Prezentační web, který má působit plynule a „luxusně“."
+      ],
+      "examples": [
+        "Pomocí locomotive-scroll přidej hladké scrollování a parallax obrázků.",
+        "Spusť animaci, až se sekce objeví ve viewportu."
+      ],
+      "needs": "Balíček locomotive-scroll do projektu."
+    },
+    {
+      "name": "babylonjs-engine",
+      "group": "3d",
+      "impact": 62,
+      "badge": "3D",
+      "source": "design",
+      "summary": "3D engine Babylon.js: fyzika, PBR materiály, hry",
+      "what": "Babylon.js pro real-time 3D, hry v prohlížeči a interaktivní vizualizace: fyzika, PBR materiály, WebGL i WebGPU.",
+      "when": [
+        "3D hra nebo náročnější interaktivní scéna s fyzikou."
+      ],
+      "examples": [
+        "Pomocí babylonjs-engine udělej scénu s fyzikou: padající kostky na podlahu.",
+        "Nastav PBR materiál kovu a prostředí (environment map)."
+      ],
+      "needs": "Balíček @babylonjs/core do projektu."
+    },
+    {
+      "name": "lightweight-3d-effects",
+      "group": "3d",
+      "impact": 58,
+      "badge": "efekty",
+      "source": "design",
+      "summary": "lehké 3D efekty: Vanta.js, Vanilla-Tilt, Zdog",
+      "what": "Dekorativní pseudo-3D bez těžkého enginu: animovaná pozadí (Vanta.js), naklápění karet (Vanilla-Tilt), jednoduché 3D ilustrace (Zdog).",
+      "when": [
+        "Chceš hloubku a pohyb, ale bez velkého 3D enginu."
+      ],
+      "examples": [
+        "Přidej do hero sekce animované pozadí z Vanta.js.",
+        "Udělej naklápění karet alb při pohybu myši (Vanilla-Tilt)."
+      ],
+      "needs": ""
+    },
+    {
+      "name": "animejs",
+      "group": "motion",
+      "impact": 54,
+      "badge": "animace",
+      "source": "design",
+      "summary": "Anime.js: timeline, SVG morfing, staggered sekvence",
+      "what": "Anime.js pro animace DOM, CSS, SVG i JS objektů: timeline, postupné (stagger) efekty, morfing SVG, keyframes.",
+      "when": [
+        "Choreografie více prvků za sebou.",
+        "Animace SVG ikon a tvarů."
+      ],
+      "examples": [
+        "Pomocí animejs postupně (stagger) zobraz položky seznamu.",
+        "Morfuj SVG ikonu play na pause."
+      ],
+      "needs": "Balíček animejs do projektu."
+    },
+    {
+      "name": "lottie-animations",
+      "group": "motion",
+      "impact": 51,
+      "badge": "animace",
+      "source": "design",
+      "summary": "Lottie: animace z After Effects, ikony, loadery",
+      "what": "Přehrávání animací z After Effects (JSON Lottie) na webu a v Reactu: animované ikony, loadery, micro-interakce.",
+      "when": [
+        "Máš Lottie JSON (třeba z LottieFiles) a chceš ho použít.",
+        "Animovaný loader nebo ikona."
+      ],
+      "examples": [
+        "Pomocí lottie-animations vlož tento loader a spusť ho při načítání knihovny.",
+        "Ikona srdíčka, která se animuje po kliknutí."
+      ],
+      "needs": "Balíček lottie-web nebo lottie-react."
+    },
+    {
+      "name": "rive-interactive",
+      "group": "motion",
+      "impact": 48,
+      "badge": "animace",
+      "source": "design",
+      "summary": "Rive: interaktivní animace se state machine",
+      "what": "Vektorové animace z Rive se stavovým automatem (state machine), které reagují na vstupy v reálném čase.",
+      "when": [
+        "Animace, která mění stavy podle interakce (hover, klik, data)."
+      ],
+      "examples": [
+        "Napoj Rive animaci tlačítka na stav přehrávání (play/pause/loading)."
+      ],
+      "needs": "Animace vytvořená v editoru rive.app."
+    },
+    {
+      "name": "react-spring-physics",
+      "group": "motion",
+      "impact": 45,
+      "badge": "animace",
+      "source": "design",
+      "summary": "fyzikální animace: React Spring, Popmotion, gesta",
+      "what": "Animace založené na fyzice pružin (React Spring) a nízkoúrovňové nástroje Popmotion: přirozený pohyb, gesta, 60 fps.",
+      "when": [
+        "UI má působit přirozeně, ne mechanicky.",
+        "Táhnutí, švihnutí a další gesta."
+      ],
+      "examples": [
+        "Pomocí react-spring-physics udělej posuvník hlasitosti s pružným dojezdem.",
+        "Karty, které jde odhodit tažením."
+      ],
+      "needs": "React projekt; balíček @react-spring/web."
+    },
+    {
+      "name": "barba-js",
+      "group": "motion",
+      "impact": 42,
+      "badge": "přechody",
+      "source": "design",
+      "summary": "plynulé přechody mezi stránkami, dojem SPA",
+      "what": "Barba.js: animované přechody mezi stránkami klasického webu, takže navigace působí jako jednostránková aplikace.",
+      "when": [
+        "Vícestránkový web, kde chceš plynulé přechody bez přepisu na SPA."
+      ],
+      "examples": [
+        "Pomocí barba-js přidej prolínání mezi podstránkami."
+      ],
+      "needs": "Balíček @barba/core."
+    },
+    {
+      "name": "pixijs-2d",
+      "group": "motion",
+      "impact": 39,
+      "badge": "grafika",
+      "source": "design",
+      "summary": "PixiJS: rychlá 2D grafika, sprity, částice",
+      "what": "PixiJS pro rychlé 2D vykreslování přes WebGL/WebGPU: hry, částicové efekty, interaktivní plátna, sprite animace.",
+      "when": [
+        "2D hra nebo hodně animovaných objektů najednou.",
+        "Částicové efekty."
+      ],
+      "examples": [
+        "Pomocí pixijs-2d udělej vizualizér zvuku s částicemi.",
+        "Jednoduchá 2D hra se sprity a kolizemi."
+      ],
+      "needs": "Balíček pixi.js."
+    },
+    {
+      "name": "scroll-reveal-libraries",
+      "group": "motion",
+      "impact": 36,
+      "badge": "scroll",
+      "source": "design",
+      "summary": "odhalování prvků při scrollu (AOS)",
+      "what": "Jednoduché fade a slide efekty při scrollu pomocí AOS (Animate On Scroll), bez složité orchestrace.",
+      "when": [
+        "Landing page nebo obsahový web, kde stačí základní efekty."
+      ],
+      "examples": [
+        "Přidej AOS fade-up na všechny sekce stránky."
+      ],
+      "needs": "Balíček aos."
+    },
+    {
+      "name": "aframe-webxr",
+      "group": "niche",
+      "impact": 30,
+      "badge": "XR",
+      "source": "design",
+      "summary": "VR a AR v prohlížeči (A-Frame, WebXR)",
+      "what": "A-Frame: 3D, VR a AR zážitky v prohlížeči pomocí HTML a architektury entita–komponenta. Také 360° prohlížeče.",
+      "when": [
+        "VR/AR ukázka nebo 360° galerie na webu."
+      ],
+      "examples": [
+        "Pomocí aframe-webxr udělej 360° prohlížeč fotek s ovládáním."
+      ],
+      "needs": "Pro VR brýle nebo telefon s podporou WebXR."
+    },
+    {
+      "name": "playcanvas-engine",
+      "group": "niche",
+      "impact": 27,
+      "badge": "3D",
+      "source": "design",
+      "summary": "herní engine PlayCanvas pro web",
+      "what": "Lehký WebGL/WebGPU herní engine s architekturou entita–komponenta a napojením na vizuální editor.",
+      "when": [
+        "Webová hra nebo výkonná 3D aplikace."
+      ],
+      "examples": [
+        "Pomocí playcanvas-engine připrav kostru jednoduché 3D hry s ovládáním postavy."
+      ],
+      "needs": "Balíček playcanvas."
+    },
+    {
+      "name": "blender-web-pipeline",
+      "group": "niche",
+      "impact": 24,
+      "badge": "pipeline",
+      "source": "design",
+      "summary": "export modelů z Blenderu na web (glTF, optimalizace)",
+      "what": "Postupy pro export modelů a animací z Blenderu do glTF, optimalizaci pro Three.js/Babylon.js a dávkové zpracování Python skripty.",
+      "when": [
+        "Máš model v Blenderu a chceš ho na web co nejmenší."
+      ],
+      "examples": [
+        "Napiš Blender skript, který vyexportuje všechny objekty do optimalizovaných .glb."
+      ],
+      "needs": "Blender."
+    },
+    {
+      "name": "substance-3d-texturing",
+      "group": "niche",
+      "impact": 20,
+      "badge": "pipeline",
+      "source": "design",
+      "summary": "PBR textury v Substance 3D Painteru pro web",
+      "what": "Tvorba PBR materiálů a export textur ze Substance 3D Painter pro web a herní enginy, optimalizace a automatizace.",
+      "when": [
+        "Texturování 3D modelů pro real-time zobrazení."
+      ],
+      "examples": [
+        "Jaké nastavení exportu ze Substance použít pro Three.js a jak textury zmenšit?"
+      ],
+      "needs": "Adobe Substance 3D Painter."
+    },
+    {
+      "name": "web3d-integration-patterns",
+      "group": "niche",
+      "impact": 17,
+      "badge": "pipeline",
+      "source": "design",
+      "summary": "jak kombinovat 3D a animační knihovny dohromady",
+      "what": "Meta-skill: architektura a vzory pro spojení Three.js, GSAP ScrollTrigger, React Three Fiber, Motion a React Spring v jedné aplikaci.",
+      "when": [
+        "Projekt používá víc 3D/animačních knihoven a hrozí chaos."
+      ],
+      "examples": [
+        "Navrhni architekturu stránky, kde se 3D scéna (R3F) animuje podle scrollu (GSAP)."
+      ],
+      "needs": ""
+    },
+    {
+      "name": "skill-creator",
+      "group": "niche",
+      "impact": 14,
+      "badge": "meta",
+      "source": "design",
+      "summary": "tvorba vlastních skills",
+      "what": "Návod, jak napsat nový skill (SKILL.md, struktura, popis, pomocné soubory) nebo upravit existující.",
+      "when": [
+        "Chceš agenta naučit vlastní postup, který se má opakovat."
+      ],
+      "examples": [
+        "Pomocí skill-creator mi vytvoř skill na psaní changelogu v mém stylu.",
+        "Uprav skill unslop-ui, ať zakazuje i stíny u tlačítek."
+      ],
+      "needs": "Nové skills patří do složky skills v konfiguraci OpenCode (tlačítko Otevřít složku skills)."
+    },
+    {
+      "name": "memory-bank",
+      "group": "work",
+      "impact": 100,
+      "badge": "tokeny",
+      "source": "memory",
+      "summary": "trvalá paměť projektu mezi sezeními, menší prompty",
+      "what": "Strukturovaná paměť projektu v .claude/memory_bank (rozhodnutí, vzory, architektura, řešené problémy). Agent si z ní bere jen to, co k úkolu potřebuje, místo procházení celého kódu. Převzato z claude-memory-bank a přizpůsobeno pro OpenCode (původní příkazy a workflow jsou uvnitř skillu).",
+      "when": [
+        "Dlouhodobý projekt, ke kterému se vracíš.",
+        "Na konci funkce, aby se zapsalo, co se zjistilo.",
+        "Na začátku práce: „co už o tomhle víme“."
+      ],
+      "examples": [
+        "Vytvoř memory bank pro tenhle projekt.",
+        "Aktualizuj memory bank podle posledních změn.",
+        "Najdi v memory bank, co víme o audio enginu."
+      ],
+      "needs": "Paměť se ukládá do .claude/memory_bank v projektu; do gitu ji skill nedává."
+    },
+    {
+      "name": "i-have-adhd",
+      "group": "work",
+      "impact": 60,
+      "badge": "čitelnost",
+      "source": "adhd",
+      "summary": "odpovědi, podle kterých jde hned jednat: nejdřív další krok, očíslované kroky",
+      "what": "Agent začne tím, co máš udělat, víc kroků očísluje, v každé odpovědi zopakuje, kde jste, vynechá odbočky, odhadne čas v minutách a ukáže, co už funguje. Žádné úvody a závěrečné fráze. Platí do konce relace, vypne se větou „stop adhd mode“.",
+      "when": [
+        "Odpovědi jsou dlouhé a hledáš v nich, co vlastně dělat.",
+        "Pracuješ na víc krocích a ztrácíš přehled, kde jsi."
+      ],
+      "examples": [
+        "Zapni i-have-adhd.",
+        "i-have-adhd: jak rozjedu tenhle projekt?"
+      ],
+      "needs": ""
+    },
+    {
+      "name": "caveman",
+      "group": "work",
+      "impact": 80,
+      "badge": "tokeny",
+      "source": "caveman",
+      "summary": "ultrastručné odpovědi, výrazně méně výstupních tokenů",
+      "what": "Agent odpovídá „jako jeskynní člověk“: vynechá vatu, zachová technickou přesnost. Má úrovně lite, full a ultra. Šetří tokeny a tím i free limity.",
+      "when": [
+        "Šetříš limity free modelů.",
+        "Chceš jen fakta bez omáčky."
+      ],
+      "examples": [
+        "Zapni caveman mode.",
+        "caveman ultra: vysvětli, proč padá build."
+      ],
+      "needs": ""
+    },
+    {
+      "name": "caveman-compress",
+      "group": "work",
+      "impact": 55,
+      "badge": "tokeny",
+      "source": "caveman",
+      "summary": "zkomprimuje AGENTS.md / CLAUDE.md a paměťové soubory",
+      "what": "Přepíše dlouhé instrukční a paměťové soubory do úsporného formátu se zachováním obsahu a uloží zálohu originálu.",
+      "when": [
+        "AGENTS.md nebo CLAUDE.md je dlouhý a žere kontext v každém dotazu."
+      ],
+      "examples": [
+        "caveman-compress AGENTS.md"
+      ],
+      "needs": "Originál zůstane jako záloha vedle (.original.md)."
+    },
+    {
+      "name": "caveman-commit",
+      "group": "work",
+      "impact": 45,
+      "badge": "git",
+      "source": "caveman",
+      "summary": "stručné commit zprávy (Conventional Commits)",
+      "what": "Napíše krátkou commit zprávu ve formátu Conventional Commits, předmět do 50 znaků, tělo jen když není jasné proč.",
+      "when": [
+        "Commituješ a nechceš ručně psát zprávu."
+      ],
+      "examples": [
+        "Napiš commit zprávu pro staged změny (caveman-commit)."
+      ],
+      "needs": ""
+    },
+    {
+      "name": "caveman-review",
+      "group": "work",
+      "impact": 40,
+      "badge": "git",
+      "source": "caveman",
+      "summary": "code review po řádcích: místo, problém, oprava",
+      "what": "Code review v ultrastručném formátu: každá poznámka je jeden řádek (kde, co je špatně, jak opravit).",
+      "when": [
+        "Rychlá kontrola změn před commitem nebo PR."
+      ],
+      "examples": [
+        "caveman-review na poslední změny v src/."
+      ],
+      "needs": ""
+    },
+    {
+      "name": "cavecrew",
+      "group": "work",
+      "impact": 30,
+      "badge": "agenti",
+      "source": "caveman",
+      "summary": "delegování na subagenty se zkráceným výstupem",
+      "what": "Rozhoduje, kdy práci předat subagentovi (hledání v kódu, malá úprava, review), aby se hlavní kontext tolik neplnil.",
+      "when": [
+        "Dlouhé sezení, kde dochází kontext."
+      ],
+      "examples": [
+        "Použij cavecrew a najdi, kde se nastavuje hlasitost."
+      ],
+      "needs": "",
+      "note": "Původně je psaný pro subagenty Claude Code (cavecrew-investigator a spol.). V OpenCode funguje jen jako postup; konkrétní subagenti z Claude Code tu nejsou."
+    },
+    {
+      "name": "caveman-stats",
+      "group": "work",
+      "impact": 20,
+      "badge": "tokeny",
+      "source": "caveman",
+      "summary": "statistiky ušetřených tokenů",
+      "what": "Ukáže skutečnou spotřebu tokenů a odhad úspory v sezení.",
+      "when": [
+        "Zajímá tě, kolik caveman ušetřil."
+      ],
+      "examples": [
+        "caveman-stats"
+      ],
+      "needs": "",
+      "note": "Čísla bere z logů sezení Claude Code, v OpenCode je nemá odkud vzít. Spotřebu tokenů a limitů v OpenCode ukazuje Zdarma v panelu Kontext (sekce Limity)."
+    },
+    {
+      "name": "caveman-help",
+      "group": "work",
+      "impact": 15,
+      "badge": "tokeny",
+      "source": "caveman",
+      "summary": "nápověda ke všem caveman režimům a příkazům",
+      "what": "Jednorázový přehled všech caveman režimů, skillů a příkazů.",
+      "when": [
+        "Nevíš, který caveman režim použít."
+      ],
+      "examples": [
+        "caveman help"
+      ],
+      "needs": ""
+    }
+  ]
+}

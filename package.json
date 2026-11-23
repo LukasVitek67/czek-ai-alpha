@@ -1,0 +1,75 @@
+{
+  "name": "czek-ai",
+  "productName": "czek-ai",
+  "version": "0.15.41",
+  "description": "czek-ai (Czech AI · čekaj) – kódovací agent (OpenCode + OmniRoute) nad free modely z mnoha poskytovatelů",
+  "main": "src/main.js",
+  "author": "Lukas Vitek",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "test": "node test/run.js",
+    "dist": "electron-builder --win portable --x64",
+    "dist:setup": "electron-builder --win nsis --x64",
+    "desktop": "node tools/to-desktop.js",
+    "dist:desktop": "npm run dist && npm run desktop"
+  },
+  "dependencies": {
+    "marked": "^15.0.12"
+  },
+  "devDependencies": {
+    "electron": "^43.3.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "cz.lukasvitek.czekai",
+    "productName": "czek-ai",
+    "electronLanguages": [
+      "en-US",
+      "cs"
+    ],
+    "files": [
+      "src/**/*",
+      "package.json",
+      "node_modules/marked/**/*"
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "artifactName": "czek-ai-${version}-portable.${ext}"
+    },
+    "extraResources": [
+      {
+        "from": "skills",
+        "to": "skills",
+        "filter": [
+          "**/*",
+          "!**/.git/**"
+        ]
+      }
+    ],
+    "portable": {
+      "unpackDirName": true,
+      "splashImage": "build/portable-splash.bmp"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "artifactName": "czek-ai-${version}-setup.${ext}",
+      "shortcutName": "czek-ai",
+      "deleteAppDataOnUninstall": false,
+      "include": "build/installer.nsh"
+    }
+  }
+}

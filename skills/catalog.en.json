@@ -1,0 +1,481 @@
+{
+  "groups": {
+    "visual": "Biggest visual impact",
+    "3d": "Strong impact: 3D and advanced effects",
+    "motion": "Medium impact: animation and interaction",
+    "niche": "Specialised",
+    "work": "Working more efficiently"
+  },
+  "skills": {
+    "ui-ux-pro-max": {
+      "badge": "design",
+      "summary": "complete design system: styles, palettes, fonts, UX rules, 22 technologies",
+      "what": "A searchable design database: dozens of styles, 192 palettes by product type, 74 font pairings, 119 UX rules, icons, charts and rules for specific stacks (React, Next.js, Tailwind, Flutter, SwiftUI…). It builds a whole design system from a product description.",
+      "when": [
+        "You are starting a new website or app and have no visual direction.",
+        "You want a palette and fonts that fit the product, not random ones.",
+        "Checking a UI against UX rules (accessibility, hierarchy, responsiveness)."
+      ],
+      "examples": [
+        "Use ui-ux-pro-max and design a design system for a lossless music player: palette, fonts, spacing, components.",
+        "Check this page against the UX rules from ui-ux-pro-max and fix what it breaks.",
+        "Pick a suitable chart type and style for this dashboard."
+      ],
+      "needs": "Python 3 (installed on this computer). The skill runs its own search script; nothing else is installed."
+    },
+    "impeccable": {
+      "badge": "design",
+      "summary": "UI audit and polish: anti-patterns, typography, hierarchy, states",
+      "what": "A professional design eye for the frontend. It can audit, critique, polish, simplify, harden edge states, animate, and handle typography, colour and design-system documentation. It builds on Anthropic’s original frontend-design skill.",
+      "when": [
+        "The UI works but looks plain or “AI-made”.",
+        "Before a release: audit of looks, accessibility and edge states.",
+        "You need the interface bolder, or quieter."
+      ],
+      "examples": [
+        "Use impeccable to audit the whole UI, then fix the worst problems.",
+        "impeccable polish on the settings page: typography, spacing, empty and error states.",
+        "Make this dashboard calmer and more readable with impeccable."
+      ],
+      "needs": "On first use it downloads its helper program from the author’s GitHub (no other dependencies)."
+    },
+    "unslop-ui": {
+      "badge": "design",
+      "summary": "guard against the “AI look”: no glow gradients, cards everywhere, emoji",
+      "what": "A short list of banned tells of generic AI design (neon gradients, everything in cards, icon tiles, eyebrow labels, emoji, filler text) and what to do instead. It activates on any UI work.",
+      "when": [
+        "Whenever the agent builds or reworks an interface.",
+        "The result looks like a template and you want to “unslop” it."
+      ],
+      "examples": [
+        "Go through this page with unslop-ui and remove everything that feels like a generated template.",
+        "Design a landing page, but follow unslop-ui."
+      ]
+    },
+    "modern-web-design": {
+      "badge": "design",
+      "summary": "2024–25 trends, micro-interactions, design systems, accessibility",
+      "what": "Principles and patterns of modern web design: current trends, micro-interactions, design systems, accessibility and performance-first.",
+      "when": [
+        "You are designing a new website and want it to feel current.",
+        "Adding micro-interactions and accessibility to an existing site."
+      ],
+      "examples": [
+        "Using modern-web-design, design a hero section and navigation for this site.",
+        "Add suitable micro-interactions to the form and check accessibility."
+      ]
+    },
+    "motion-framer": {
+      "badge": "animation",
+      "summary": "animation in React (Motion / Framer Motion): gestures, layout, transitions",
+      "what": "The Motion animation library (formerly Framer Motion) for React and plain JS: motion components, variants, gestures (hover, tap, drag), layout animations, exit animations (AnimatePresence), springs and scroll effects.",
+      "when": [
+        "A React app needs smooth transitions and responses to gestures.",
+        "Animating layout changes or elements leaving."
+      ],
+      "examples": [
+        "With motion-framer, animate opening and closing the sidebar.",
+        "Track list: animated reordering when the sort changes (layout animation)."
+      ],
+      "needs": "A React or JS project; the agent installs the motion package into the project."
+    },
+    "gsap-scrolltrigger": {
+      "badge": "animation",
+      "summary": "GSAP and ScrollTrigger: scroll animations, parallax, pinning, scrubbing",
+      "what": "GSAP (GreenSock) and the ScrollTrigger plugin: tweens, timelines, scroll-driven animation, pinning sections, scrubbing and parallax.",
+      "when": [
+        "A showcase page where content animates with scrolling.",
+        "Complex timed animation sequences."
+      ],
+      "examples": [
+        "With gsap-scrolltrigger, pin the product section and animate it on scroll.",
+        "Make a parallax background in the hero section."
+      ],
+      "needs": "The gsap package in the project."
+    },
+    "threejs-webgl": {
+      "badge": "3D",
+      "summary": "3D scenes, WebGL/WebGPU, shaders, configurators",
+      "what": "Three.js for 3D on the web: scenes, cameras, lights, materials, shaders, model loading, product configurators and visualisations.",
+      "when": [
+        "A 3D scene or model right on the page.",
+        "A custom shader or a 3D data visualisation."
+      ],
+      "examples": [
+        "With threejs-webgl, make a rotating 3D headphones model with lighting and mouse controls.",
+        "Add a simple slowly waving shader to the background."
+      ],
+      "needs": "The three package in the project."
+    },
+    "react-three-fiber": {
+      "badge": "3D",
+      "summary": "3D in React: Three.js through components and hooks",
+      "what": "React Three Fiber (R3F): Three.js declaratively as React components, with state and reusable abstractions. Ideal for product configurators.",
+      "when": [
+        "A React app that needs 3D.",
+        "You want to compose a 3D scene from components."
+      ],
+      "examples": [
+        "With react-three-fiber, build a 3D product colour configurator.",
+        "Convert this Three.js scene to R3F components."
+      ],
+      "needs": "A React project; the @react-three/fiber and three packages."
+    },
+    "animated-component-libraries": {
+      "badge": "animation",
+      "summary": "ready-made animated components: Magic UI, React Bits",
+      "what": "Collections of ready-made animated React components: Magic UI (150+ components on TypeScript/Tailwind/Motion) and React Bits (90+ with minimal dependencies).",
+      "when": [
+        "A landing page or dashboard where you want striking elements fast.",
+        "You don’t want to write animations from scratch."
+      ],
+      "examples": [
+        "Find a suitable animated component for the feature list in animated-component-libraries and use it.",
+        "Add an animated counter to the statistics."
+      ],
+      "needs": "A React and Tailwind project."
+    },
+    "spline-interactive": {
+      "badge": "3D",
+      "summary": "interactive 3D scenes from Spline without 3D programming",
+      "what": "Spline is a 3D editor in the browser; the skill advises how to design and animate scenes and embed them in a website or React.",
+      "when": [
+        "You want a 3D element designed visually, not in code.",
+        "Prototyping a 3D UI."
+      ],
+      "examples": [
+        "How do I embed my Spline scene in a Next.js page and react to clicks?",
+        "With spline-interactive, prepare a hero section with a 3D object from Spline."
+      ],
+      "needs": "An account on spline.design to create scenes."
+    },
+    "locomotive-scroll": {
+      "badge": "scroll",
+      "summary": "smooth scrolling, parallax, viewport detection",
+      "what": "The Locomotive Scroll library: smooth scrolling, parallax, detecting elements in the viewport and scroll-driven animation.",
+      "when": [
+        "A showcase site that should feel smooth and “premium”."
+      ],
+      "examples": [
+        "With locomotive-scroll, add smooth scrolling and image parallax.",
+        "Start an animation when the section enters the viewport."
+      ],
+      "needs": "The locomotive-scroll package in the project."
+    },
+    "babylonjs-engine": {
+      "badge": "3D",
+      "summary": "Babylon.js 3D engine: physics, PBR materials, games",
+      "what": "Babylon.js for real-time 3D, browser games and interactive visualisations: physics, PBR materials, WebGL and WebGPU.",
+      "when": [
+        "A 3D game or a more demanding interactive scene with physics."
+      ],
+      "examples": [
+        "With babylonjs-engine, make a physics scene: cubes falling onto a floor.",
+        "Set up a metal PBR material and an environment map."
+      ],
+      "needs": "The @babylonjs/core package in the project."
+    },
+    "lightweight-3d-effects": {
+      "badge": "effects",
+      "summary": "light 3D effects: Vanta.js, Vanilla-Tilt, Zdog",
+      "what": "Decorative pseudo-3D without a heavy engine: animated backgrounds (Vanta.js), tilting cards (Vanilla-Tilt), simple 3D illustrations (Zdog).",
+      "when": [
+        "You want depth and motion without a big 3D engine."
+      ],
+      "examples": [
+        "Add an animated Vanta.js background to the hero section.",
+        "Make album cards tilt with the mouse (Vanilla-Tilt)."
+      ]
+    },
+    "animejs": {
+      "badge": "animation",
+      "summary": "Anime.js: timelines, SVG morphing, staggered sequences",
+      "what": "Anime.js for animating DOM, CSS, SVG and JS objects: timelines, staggered effects, SVG morphing, keyframes.",
+      "when": [
+        "Choreographing several elements in sequence.",
+        "Animating SVG icons and shapes."
+      ],
+      "examples": [
+        "With animejs, reveal list items one after another (stagger).",
+        "Morph the play SVG icon into pause."
+      ],
+      "needs": "The animejs package in the project."
+    },
+    "lottie-animations": {
+      "badge": "animation",
+      "summary": "Lottie: After Effects animations, icons, loaders",
+      "what": "Playing After Effects animations (Lottie JSON) on the web and in React: animated icons, loaders, micro-interactions.",
+      "when": [
+        "You have a Lottie JSON (e.g. from LottieFiles) and want to use it.",
+        "An animated loader or icon."
+      ],
+      "examples": [
+        "With lottie-animations, embed this loader and play it while the library loads.",
+        "A heart icon that animates on click."
+      ],
+      "needs": "The lottie-web or lottie-react package."
+    },
+    "rive-interactive": {
+      "badge": "animation",
+      "summary": "Rive: interactive animations with a state machine",
+      "what": "Vector animations from Rive with a state machine that react to input in real time.",
+      "when": [
+        "An animation that changes state with interaction (hover, click, data)."
+      ],
+      "examples": [
+        "Connect the Rive button animation to the playback state (play/pause/loading)."
+      ],
+      "needs": "An animation made in the rive.app editor."
+    },
+    "react-spring-physics": {
+      "badge": "animation",
+      "summary": "physics-based animation: React Spring, Popmotion, gestures",
+      "what": "Spring-physics animation (React Spring) and the low-level Popmotion tools: natural motion, gestures, 60 fps.",
+      "when": [
+        "The UI should feel natural, not mechanical.",
+        "Dragging, flicking and other gestures."
+      ],
+      "examples": [
+        "With react-spring-physics, make a volume slider with a springy settle.",
+        "Cards you can throw away by dragging."
+      ],
+      "needs": "A React project; the @react-spring/web package."
+    },
+    "barba-js": {
+      "badge": "transitions",
+      "summary": "smooth page transitions, SPA feel",
+      "what": "Barba.js: animated transitions between pages of a classic website, so navigation feels like a single-page app.",
+      "when": [
+        "A multi-page site where you want smooth transitions without rewriting it as an SPA."
+      ],
+      "examples": [
+        "With barba-js, add a crossfade between subpages."
+      ],
+      "needs": "The @barba/core package."
+    },
+    "pixijs-2d": {
+      "badge": "graphics",
+      "summary": "PixiJS: fast 2D graphics, sprites, particles",
+      "what": "PixiJS for fast 2D rendering via WebGL/WebGPU: games, particle effects, interactive canvases, sprite animation.",
+      "when": [
+        "A 2D game or many animated objects at once.",
+        "Particle effects."
+      ],
+      "examples": [
+        "With pixijs-2d, build an audio visualiser with particles.",
+        "A simple 2D game with sprites and collisions."
+      ],
+      "needs": "The pixi.js package."
+    },
+    "scroll-reveal-libraries": {
+      "badge": "scroll",
+      "summary": "revealing elements on scroll (AOS)",
+      "what": "Simple fade and slide effects on scroll with AOS (Animate On Scroll), without complex orchestration.",
+      "when": [
+        "A landing page or content site where basic effects are enough."
+      ],
+      "examples": [
+        "Add AOS fade-up to all sections of the page."
+      ],
+      "needs": "The aos package."
+    },
+    "aframe-webxr": {
+      "badge": "XR",
+      "summary": "VR and AR in the browser (A-Frame, WebXR)",
+      "what": "A-Frame: 3D, VR and AR experiences in the browser with HTML and an entity–component architecture. Also 360° viewers.",
+      "when": [
+        "A VR/AR demo or a 360° gallery on the web."
+      ],
+      "examples": [
+        "With aframe-webxr, build a 360° photo viewer with controls."
+      ],
+      "needs": "For VR headsets or a phone with WebXR support."
+    },
+    "playcanvas-engine": {
+      "badge": "3D",
+      "summary": "PlayCanvas game engine for the web",
+      "what": "A light WebGL/WebGPU game engine with an entity–component architecture and a visual editor.",
+      "when": [
+        "A web game or a high-performance 3D app."
+      ],
+      "examples": [
+        "With playcanvas-engine, set up the skeleton of a simple 3D game with character controls."
+      ],
+      "needs": "The playcanvas package."
+    },
+    "blender-web-pipeline": {
+      "badge": "pipeline",
+      "summary": "exporting models from Blender to the web (glTF, optimisation)",
+      "what": "Workflows for exporting models and animations from Blender to glTF, optimising them for Three.js/Babylon.js and batch processing with Python scripts.",
+      "when": [
+        "You have a model in Blender and want it on the web as small as possible."
+      ],
+      "examples": [
+        "Write a Blender script that exports all objects to optimised .glb files."
+      ],
+      "needs": "Blender."
+    },
+    "substance-3d-texturing": {
+      "badge": "pipeline",
+      "summary": "PBR textures in Substance 3D Painter for the web",
+      "what": "Creating PBR materials and exporting textures from Substance 3D Painter for the web and game engines, with optimisation and automation.",
+      "when": [
+        "Texturing 3D models for real-time display."
+      ],
+      "examples": [
+        "Which Substance export settings should I use for Three.js and how do I shrink the textures?"
+      ],
+      "needs": "Adobe Substance 3D Painter."
+    },
+    "web3d-integration-patterns": {
+      "badge": "pipeline",
+      "summary": "how to combine 3D and animation libraries",
+      "what": "Meta-skill: architecture and patterns for combining Three.js, GSAP ScrollTrigger, React Three Fiber, Motion and React Spring in one app.",
+      "when": [
+        "The project uses several 3D/animation libraries and chaos looms."
+      ],
+      "examples": [
+        "Design the architecture of a page where a 3D scene (R3F) animates with scrolling (GSAP)."
+      ]
+    },
+    "skill-creator": {
+      "badge": "meta",
+      "summary": "creating your own skills",
+      "what": "A guide to writing a new skill (SKILL.md, structure, description, helper files) or editing an existing one.",
+      "when": [
+        "You want to teach the agent your own repeatable procedure."
+      ],
+      "examples": [
+        "With skill-creator, create a skill for writing a changelog in my style.",
+        "Edit the unslop-ui skill so it also bans shadows on buttons."
+      ],
+      "needs": "New skills go into the skills folder of the OpenCode config (button Open skills folder)."
+    },
+    "memory-bank": {
+      "badge": "tokens",
+      "summary": "persistent project memory between sessions, smaller prompts",
+      "what": "Structured project memory in .claude/memory_bank (decisions, patterns, architecture, solved problems). The agent takes only what the task needs instead of going through all the code. Taken from claude-memory-bank and adapted for OpenCode (the original commands and workflow are inside the skill).",
+      "when": [
+        "A long-term project you keep coming back to.",
+        "At the end of a feature, to record what was learned.",
+        "At the start of work: “what do we already know about this”."
+      ],
+      "examples": [
+        "Create a memory bank for this project.",
+        "Update the memory bank with the latest changes.",
+        "Find what the memory bank says about the audio engine."
+      ],
+      "needs": "The memory is stored in .claude/memory_bank in the project; the skill does not add it to git."
+    },
+    "caveman": {
+      "badge": "tokens",
+      "summary": "ultra-short answers, far fewer output tokens",
+      "what": "The agent answers “like a caveman”: no filler, full technical accuracy. Levels lite, full and ultra. Saves tokens and therefore free limits.",
+      "when": [
+        "You are saving free model limits.",
+        "You want just the facts."
+      ],
+      "examples": [
+        "Turn on caveman mode.",
+        "caveman ultra: explain why the build fails."
+      ]
+    },
+    "caveman-compress": {
+      "badge": "tokens",
+      "summary": "compresses AGENTS.md / CLAUDE.md and memory files",
+      "what": "Rewrites long instruction and memory files into a compact format while keeping the content, and saves a backup of the original.",
+      "when": [
+        "AGENTS.md or CLAUDE.md is long and eats context in every request."
+      ],
+      "examples": [
+        "caveman-compress AGENTS.md"
+      ],
+      "needs": "The original stays next to it as a backup (.original.md)."
+    },
+    "caveman-commit": {
+      "badge": "git",
+      "summary": "short commit messages (Conventional Commits)",
+      "what": "Writes a short commit message in Conventional Commits format, subject under 50 characters, a body only when the why isn’t obvious.",
+      "when": [
+        "You are committing and don’t want to write the message by hand."
+      ],
+      "examples": [
+        "Write a commit message for the staged changes (caveman-commit)."
+      ]
+    },
+    "caveman-review": {
+      "badge": "git",
+      "summary": "line-by-line code review: location, problem, fix",
+      "what": "Code review in an ultra-short format: every comment is one line (where, what’s wrong, how to fix).",
+      "when": [
+        "A quick check of changes before a commit or PR."
+      ],
+      "examples": [
+        "caveman-review on the latest changes in src/."
+      ]
+    },
+    "cavecrew": {
+      "badge": "agents",
+      "summary": "delegating to subagents with shortened output",
+      "what": "Decides when to hand work to a subagent (code search, a small edit, review) so the main context fills up less.",
+      "when": [
+        "A long session that is running out of context."
+      ],
+      "examples": [
+        "Use cavecrew and find where the volume is set."
+      ],
+      "note": "Originally written for Claude Code subagents (cavecrew-investigator and co.). In OpenCode it works only as a procedure; those Claude Code subagents are not available here."
+    },
+    "caveman-stats": {
+      "badge": "tokens",
+      "summary": "statistics of saved tokens",
+      "what": "Shows real token usage and the estimated savings in a session.",
+      "when": [
+        "You want to know how much caveman saved."
+      ],
+      "examples": [
+        "caveman-stats"
+      ],
+      "note": "It reads numbers from Claude Code session logs, which OpenCode doesn’t have. Token and limit usage in OpenCode is shown by Zdarma in the Context panel (Limits section)."
+    },
+    "caveman-help": {
+      "badge": "tokens",
+      "summary": "help for all caveman modes and commands",
+      "what": "A one-off overview of all caveman modes, skills and commands.",
+      "when": [
+        "You don’t know which caveman mode to use."
+      ],
+      "examples": [
+        "caveman help"
+      ]
+    },
+    "app-debugging": {
+      "badge": "debug",
+      "summary": "app won't start or shows a blank/black window: read the real error from the window console",
+      "what": "A fixed procedure for Tauri, Electron and WebView2 apps that won't start, show an empty window or crash right away: launch detached with a debug port, read the window's console errors with the bundled script (cdp-console.cjs) and fix that one cause. It forbids relaunch, kill, rebuild loops.",
+      "when": [
+        "The app window is black or white with nothing in it.",
+        "The app won't start or crashes immediately.",
+        "The agent keeps launching and killing the app without learning anything."
+      ],
+      "examples": [
+        "The app shows a black window. Use app-debugging and find the real error from the console.",
+        "Use app-debugging: nothing shows after launch, fix it."
+      ],
+      "needs": "Node.js 22+ and Chrome or Edge. The script opens the built frontend (--dist ./dist) or the dev server (--url) in a headless browser and prints the error that leaves the window blank. No app restart needed."
+    },
+    "i-have-adhd": {
+      "badge": "readability",
+      "summary": "answers you can act on right away: next step first, numbered steps",
+      "what": "The agent leads with what you should do, numbers multi-step work, restates where you are every turn, drops tangents, gives time estimates in minutes and shows what already works. No preamble or closing phrases. Stays on for the session; turn it off with “stop adhd mode”.",
+      "when": [
+        "Answers are long and you hunt for what to actually do.",
+        "You work through many steps and lose track of where you are."
+      ],
+      "examples": [
+        "Turn on i-have-adhd.",
+        "i-have-adhd: how do I get this project running?"
+      ]
+    }
+  }
+}

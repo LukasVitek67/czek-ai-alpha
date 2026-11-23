@@ -1,0 +1,25 @@
+node_modules/
+dist/
+dist-test/
+# sestavené exe pro sdílení (92 MB) – stavět lokálně, do gitu nepatří
+share/czek-ai/
+*.exe
+*.zip
+# lokální cache nástrojů
+.impeccable/
+plugins/
+# dočasné výstupy testů a logy
+*.log
+test/**/tmp/
+# klíče a lokální nastavení – NIKDY do repozitáře
+.env
+.env.*
+settings.json
+auth.json
+*.key
+# Vercel CLI (propojení webu tierlistu)
+site/.vercel/
+# klíče: do VEŘEJNÉHO repa nikdy – ani soubor pro synchronizaci klíčů
+private/
+keys*.json
+site/.env.local

@@ -1,0 +1,6 @@
+{
+  "name": "czek-ai-tierlist",
+  "private": true,
+  "description": "Veřejný tierlist free modelů z anonymních statistik czek-ai (web + API na Vercelu, data v Supabase)",
+  "engines": { "node": ">=20" }
+}

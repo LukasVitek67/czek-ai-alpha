@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'">
+  <title>czek-ai</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <aside id="side">
+    <div class="brand">czek-ai</div>
+    <button id="newChat" class="side-btn" data-i18n="side.newChat">+ Nová konverzace</button>
+    <div id="sessions" class="sessions"></div>
+    <div class="side-foot">
+      <button id="openOpencode" class="side-btn" data-i18n="side.openOc" data-i18n-title="side.openOcTitle">Otevřít OpenCode</button>
+      <button id="openSkills" class="side-btn" data-i18n="side.skills">Skills a návody</button>
+      <button id="openSettings" class="side-btn" data-i18n="side.settings">Nastavení a klíče</button>
+      <div id="freeCount" class="muted small"></div>
+    </div>
+  </aside>
+
+  <main id="chatView">
+    <header class="bar">
+      <button id="cwdBtn" class="bar-btn mono"></button>
+      <div class="bar-spacer"></div>
+      <div class="picker-wrap">
+        <button id="modelBtn" class="bar-btn" data-i18n-title="chat.modelTitle"></button>
+        <div id="modelPop" class="pop" hidden>
+          <input id="modelSearch" type="search" data-i18n-ph="chat.searchModel" autocomplete="off">
+          <div id="modelList" class="model-list"></div>
+          <div class="pop-foot">
+            <button id="refreshModels" class="link" data-i18n="chat.refresh">Obnovit seznam</button>
+            <span class="muted small" data-i18n="chat.favHint"></span>
+          </div>
+        </div>
+      </div>
+      <button id="unfBtn" class="bar-btn" aria-pressed="false" data-i18n="chat.unf" data-i18n-title="chat.unfTitle" hidden>Unfiltered</button>
+      <select id="modeSel" class="bar-select" data-i18n-title="chat.modeTitle">
+        <option value="ask" data-i18n="chat.modeAsk">Ptát se na změny</option>
+        <option value="edits" data-i18n="chat.modeEdits">Úpravy souborů bez ptaní</option>
+        <option value="all" data-i18n="chat.modeAll">Vše bez ptaní</option>
+      </select>
+    </header>
+
+    <section id="log" class="log"></section>
+
+    <footer class="composer">
+      <textarea id="input" rows="3" data-i18n-ph="chat.placeholder"></textarea>
+      <div class="composer-row">
+        <span id="status" class="muted small"></span>
+        <div class="bar-spacer"></div>
+        <button id="stopBtn" class="btn" hidden data-i18n="chat.stop">Zastavit</button>
+        <button id="sendBtn" class="btn primary" data-i18n="chat.send">Odeslat</button>
+      </div>
+    </footer>
+  </main>
+
+  <main id="settingsView" hidden>
+    <header class="bar">
+      <strong data-i18n="set.presetTitle">czek-ai · Předvolba a klíče pro OpenCode</strong>
+      <div class="bar-spacer"></div>
+      <button id="closeSettings" class="btn" data-i18n="set.back">Hotovo · Zpět do OpenCode</button>
+    </header>
+    <div class="settings-wrap">
+      <nav class="set-nav" id="setNav">
+        <button data-page="wizard" data-i18n="nav.wizard">★ Průvodce klíči</button>
+        <button data-page="providers" data-i18n="nav.providers">Poskytovatelé a klíče</button>
+        <button data-page="models" data-i18n="nav.models">Sjednocené modely</button>
+        <button data-page="tiers" data-i18n="nav.tiers">Tierlisty modelů</button>
+        <button data-page="opencode" data-i18n="nav.opencode">OpenCode a proxy</button>
+        <button data-page="general" data-i18n="nav.general">Obecné</button>
+        <button data-page="advanced" data-i18n="nav.advanced">Pokročilé</button>
+        <button data-page="diag" data-i18n="nav.diag">Diagnostika</button>
+        <button data-page="about" data-i18n="nav.about">O aplikaci</button>
+      </nav>
+      <div class="settings">
+
+        <div class="page wizard" data-page="wizard" hidden>
+          <section>
+            <h2><span data-i18n="wiz.title">Průvodce klíči</span> <span class="muted small" id="wizProgress"></span></h2>
+            <p class="muted" id="wizIntro"></p>
+            <ol class="wiz-dots" id="wizDots"></ol>
+            <div id="wizCard"></div>
+            <p class="muted small" data-i18n="wiz.terms"></p>
+          </section>
+        </div>
+
+        <div class="page" data-page="providers">
+          <section id="providersSection">
+            <h2><span data-i18n="prov.title">Poskytovatelé a API klíče</span> <span class="muted small" id="provCount"></span></h2>
+            <div class="prov" style="margin-bottom: 12px;">
+              <div class="top">
+                <strong class="nm">OmniRoute</strong>
+                <button id="openOmniDash" class="btn primary small" data-i18n="prov.omniBtn">Otevřít nástěnku OmniRoute</button>
+              </div>
+              <div class="note2" data-i18n="prov.omniIntro"></div>
+            </div>
+            <p class="muted" data-i18n="prov.intro"></p>
+            <p class="muted small" data-i18n-html="prov.how"></p>
+            <div class="prov-tools">
+              <input id="provSearch" type="search" data-i18n-ph="prov.search" autocomplete="off">
+              <select id="provFilter">
+                <option value="all" data-i18n="prov.fAll">Všichni</option>
+                <option value="key" data-i18n="prov.fKey">S klíčem</option>
+                <option value="free" data-i18n="prov.fFree">Fungují bez klíče</option>
+                <option value="missing" data-i18n="prov.fMissing">Chybí klíč</option>
+              </select>
+              <div class="bar-spacer"></div>
+              <button id="checkKeys" class="btn small" data-i18n="prov.khBtn">Ověřit klíče</button>
+              <button id="testAll" class="btn small" data-i18n="prov.testAll">Otestovat všechny použitelné</button>
+            </div>
+            <div class="muted small" id="testAllState"></div>
+            <div id="provList"></div>
+          </section>
+          <section>
+            <h2 data-i18n="custom.title">Vlastní endpoint</h2>
+            <p class="muted" data-i18n="custom.intro"></p>
+            <div id="customList"></div>
+            <button id="addCustom" class="btn" data-i18n="custom.add">+ Přidat endpoint</button>
+          </section>
+          <section id="keysFileSection">
+            <h2 data-i18n="kf.title">Klíče v soukromém repozitáři</h2>
+            <p class="muted" data-i18n="kf.intro"></p>
+            <div class="prov-tools">
+              <code id="kfPath" class="muted small"></code>
+              <div class="bar-spacer"></div>
+              <button id="kfPick" class="btn small" data-i18n="kf.pick">Vybrat soubor…</button>
+              <button id="kfSync" class="btn small" data-i18n="kf.sync">Synchronizovat teď</button>
+            </div>
+            <div class="muted small" id="kfState"></div>
+          </section>
+        </div>
+
+        <div class="page" data-page="models" hidden>
+          <section>
+            <h2><span data-i18n="united.title">Sjednocené modely napříč poskytovateli</span> <span class="muted small" id="unitedCount"></span></h2>
+            <p class="muted" data-i18n="united.intro"></p>
+            <div class="prov-tools">
+              <input id="unitedSearch" type="search" data-i18n-ph="united.search" autocomplete="off">
+              <select id="unitedFilter">
+                <option value="all" data-i18n="united.fAll">Všechny dostupné</option>
+                <option value="multi" data-i18n="united.fMulti">Více poskytovatelů (2+)</option>
+                <option value="max" data-i18n="united.fMax">Síla: Max</option>
+                <option value="high" data-i18n="united.fHigh">Síla: High</option>
+                <option value="locked" data-i18n="united.fLocked">Včetně neodemčených (chybí klíč)</option>
+              </select>
+            </div>
+            <div id="unitedList"></div>
+          </section>
+        </div>
+
+        <div class="page" data-page="tiers" hidden>
+          <section>
+            <h2 data-i18n="nav.tiers">Tierlisty modelů</h2>
+            <p class="muted" data-i18n="tiers.intro"></p>
+            <label class="row-inline"><span data-i18n="tiers.prefer">Preferované rodiny modelů</span> <input id="optPrefer" type="text" class="wide" data-i18n-ph="tiers.preferPh"></label>
+            <p class="muted small" data-i18n="tiers.preferNote"></p>
+            <div class="tier-tabs" id="tierTabs"></div>
+            <div id="tierEdit"></div>
+          </section>
+        </div>
+
+        <div class="page" data-page="opencode" hidden>
+          <section>
+            <h2 data-i18n="oc.popupTitle">Velikost vyskakovací nabídky modelů v OpenCode</h2>
+            <p class="muted" data-i18n="oc.popupIntro"></p>
+            <label class="row-inline">
+              <span data-i18n="oc.popupW">Šířka (px)</span>
+              <input id="optPopupW" type="range" min="360" max="1280" step="20" style="width:220px">
+              <input id="optPopupWNum" type="number" min="320" max="1400" step="20" style="width:80px">
+            </label>
+            <label class="row-inline">
+              <span data-i18n="oc.popupH">Výška (px)</span>
+              <input id="optPopupH" type="range" min="280" max="960" step="20" style="width:220px">
+              <input id="optPopupHNum" type="number" min="260" max="1100" step="20" style="width:80px">
+            </label>
+            <div class="keyrow" style="margin-top:8px">
+              <span class="muted small" data-i18n="oc.popupPresets">Předvolby velikosti</span>
+              <button type="button" class="btn small popup-preset" data-w="440" data-h="380">S (440 × 380)</button>
+              <button type="button" class="btn small popup-preset" data-w="680" data-h="560">M (680 × 560)</button>
+              <button type="button" class="btn small popup-preset" data-w="860" data-h="680">L (860 × 680)</button>
+              <button type="button" class="btn small popup-preset" data-w="1080" data-h="800">XL (1080 × 800)</button>
+            </div>
+          </section>
+          <section>
+            <h2 data-i18n="oc.title">OpenCode a nabídka modelů</h2>
+            <label class="row-check"><input type="checkbox" id="optOnlyTiers"> <span data-i18n="oc.onlyTiers"></span></label>
+            <label class="row-check"><input type="checkbox" id="optOcProviders"> <span data-i18n="oc.providers"></span></label>
+          </section>
+          <section>
+            <h2 data-i18n="proxy.title">Proxy pro OpenCode</h2>
+            <p class="muted" data-i18n-html="proxy.intro"></p>
+            <label class="row-check"><input type="checkbox" id="optProxy"> <span data-i18n="proxy.run">Spouštět proxy</span></label>
+            <div class="prov">
+              <div class="top"><span class="nm" id="proxyUrl"></span><span class="state" id="proxyState"></span></div>
+              <div class="keyrow">
+                <button id="proxyOpencode" class="btn small" data-i18n="proxy.configure">Nastavit OpenCode</button>
+                <span class="test" id="proxyOcRes"></span>
+              </div>
+              <div class="proxy-log" id="proxyLog"></div>
+            </div>
+          </section>
+        </div>
+
+        <div class="page" data-page="general" hidden>
+          <section>
+            <h2 data-i18n="gen.lang">Jazyk</h2>
+            <label class="row-inline">
+              <select id="optLang">
+                <option value="cs">Čeština</option>
+                <option value="en">English</option>
+              </select>
+            </label>
+            <p class="muted small" data-i18n="gen.langNote"></p>
+          </section>
+          <section>
+            <h2 data-i18n="gen.behaviour">Chování</h2>
+            <label class="row-check"><input type="checkbox" id="optFallback"> <span data-i18n="gen.fallback"></span></label>
+          </section>
+        </div>
+
+        <div class="page" data-page="advanced" hidden>
+          <section>
+            <h2 data-i18n="nav.advanced">Pokročilé</h2>
+            <p class="muted" data-i18n="adv.intro"></p>
+            <label class="row-inline"><span data-i18n="adv.temp">Teplota</span> <input id="optTemp" type="number" step="0.1" min="0" max="2" data-i18n-ph="adv.tempPh"></label>
+            <label class="row-inline"><span data-i18n="proxy.port">Port</span> <input id="optProxyPort" type="number" min="1024" max="65535"></label>
+            <label class="row-check"><input type="checkbox" id="optOmni"> <span data-i18n-html="adv.omni"></span></label>
+            <p class="muted small" id="omniState"></p>
+          </section>
+          <section>
+            <h2 data-i18n="adv.unfTitle">Režim Unfiltered</h2>
+            <p class="muted" data-i18n="adv.unfIntro"></p>
+            <label class="row-check"><input type="checkbox" id="optShowUnf"> <span data-i18n="adv.unfShow"></span></label>
+          </section>
+          <section id="fullAutoSection">
+            <h2 data-i18n="fa.title">Plný automatický režim</h2>
+            <p class="muted" data-i18n-html="fa.intro"></p>
+            <label class="row-check"><input type="checkbox" id="optFullAuto"> <span data-i18n="fa.check"></span></label>
+            <div class="fullauto-warn" id="fullAutoWarn" hidden>
+              <p><strong data-i18n="fa.warnHead"></strong></p>
+              <ul>
+                <li data-i18n-html="fa.warn1"></li>
+                <li data-i18n-html="fa.warn2"></li>
+                <li data-i18n-html="fa.warn3"></li>
+                <li data-i18n="fa.warn4"></li>
+              </ul>
+              <p data-i18n="fa.warnFoot"></p>
+              <div class="keyrow">
+                <button class="btn small danger" id="fullAutoYes" data-i18n="fa.yes">Rozumím, zapnout</button>
+                <button class="btn small" id="fullAutoNo" data-i18n="common.cancel">Zrušit</button>
+              </div>
+            </div>
+            <p class="fullauto-on" id="fullAutoOn" hidden data-i18n="fa.on"></p>
+          </section>
+        </div>
+
+        <div class="page diag" data-page="diag" hidden>
+          <section>
+            <h2 data-i18n="nav.diag">Diagnostika</h2>
+            <p class="muted" data-i18n="diag.intro"></p>
+            <div class="keyrow">
+              <button id="diagRefresh" class="btn small" data-i18n="diag.refresh">Obnovit</button>
+              <button id="diagExport" class="btn small" data-i18n="diag.export">Uložit diagnostiku na plochu</button>
+              <button id="diagFolder" class="btn small" data-i18n="diag.openFolder">Otevřít složku se záznamem</button>
+              <span class="muted small" id="diagState"></span>
+            </div>
+          </section>
+          <section><h2 data-i18n="diag.findings">Co je špatně</h2><div id="diagFindings"></div></section>
+          <section><h2 data-i18n="diag.health">Stav</h2><table class="kv" id="diagHealth"></table></section>
+          <section><h2 data-i18n="diag.models">Modely (24 h)</h2><div class="tbl-wrap" id="diagModels"></div></section>
+          <section><h2 data-i18n="diag.requests">Poslední požadavky</h2><div class="tbl-wrap" id="diagRequests"></div></section>
+          <section><h2 data-i18n="diag.omni">Pokusy v OmniRoute</h2><div class="tbl-wrap" id="diagOmni"></div></section>
+          <section><h2 data-i18n="diag.sessions">Konverzace OpenCode</h2><div class="tbl-wrap" id="diagSessions"></div></section>
+          <section><h2 data-i18n="diag.session">Rozbor konverzace</h2><div id="diagDetail"></div></section>
+          <section><h2 data-i18n="diag.providers">Poskytovatelé</h2><div class="tbl-wrap" id="diagProviders"></div></section>
+          <section><h2 data-i18n="diag.logs">Logy</h2>
+            <h3 class="sub" data-i18n="diag.omniLog"></h3><pre class="log-box" id="diagOmniLog"></pre>
+            <h3 class="sub" data-i18n="diag.zdarmaLog"></h3><pre class="log-box" id="diagZdarmaLog"></pre>
+          </section>
+          <section><h2 data-i18n="diag.sizes">Velikost dat</h2><table class="kv" id="diagSizes"></table></section>
+        </div>
+
+        <div class="page" data-page="about" hidden>
+          <section>
+            <h2>czek-ai</h2>
+            <p data-i18n="app.tagline"></p>
+            <table class="kv" id="aboutTable"></table>
+          </section>
+          <section>
+            <h2 data-i18n="about.data">Data a klíče</h2>
+            <p class="muted" data-i18n="about.dataNote"></p>
+            <button id="openData" class="btn small" data-i18n="about.openData">Otevřít složku s daty</button>
+            <span class="muted small mono" id="dataPath"></span>
+          </section>
+          <section>
+            <h2 data-i18n="about.licenses">Licence</h2>
+            <p class="muted" data-i18n="about.licNote"></p>
+          </section>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <script src="../i18n.js"></script>
+  <script src="../wizard.js"></script>
+  <script src="../../node_modules/marked/lib/marked.umd.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

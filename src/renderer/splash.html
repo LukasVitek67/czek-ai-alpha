@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'">
+  <title>czek-ai</title>
+  <style>
+    :root {
+      --bg: #f7f6f3; --panel: #ffffff; --text: #1d1d1b; --muted: #6d6b65; --rule: #dfddd6;
+      --accent: #2f6f4f; --track: #e7e4dc; --err: #a42c1f;
+      --font: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+      --mono: "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+      color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #1b1b1a; --panel: #232321; --text: #e6e4de; --muted: #9b988f; --rule: #34332f;
+        --accent: #6fbf8f; --track: #2e2d2a; --err: #ff8a7a; color-scheme: dark; }
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 13px/1.4 var(--font); overflow: hidden; user-select: none; }
+    body { display: flex; flex-direction: column; padding: 22px 24px 16px; -webkit-app-region: drag; border: 1px solid var(--rule); }
+    header { display: flex; align-items: center; gap: 12px; }
+    header img { width: 40px; height: 40px; }
+    .name { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+    .ver { color: var(--muted); font: 11px var(--mono); margin-left: 6px; font-weight: 400; }
+    .title { color: var(--muted); }
+    ol { list-style: none; margin: 18px 0 0; padding: 14px 0 0; border-top: 1px solid var(--rule); flex: 1; }
+    li { display: grid; grid-template-columns: 18px 1fr; column-gap: 10px; padding: 4px 0; }
+    li .lbl { color: var(--muted); }
+    li.run .lbl, li.done .lbl, li.error .lbl { color: var(--text); }
+    li.run .lbl { font-weight: 600; }
+    .detail { grid-column: 2; color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    li.error .detail { color: var(--err); white-space: normal; max-height: 3.2em; }
+    .ic { width: 14px; height: 14px; margin-top: 2px; border-radius: 50%; position: relative; }
+    li.wait .ic { border: 1.5px solid var(--rule); }
+    li.run .ic { border: 2px solid var(--track); border-top-color: var(--accent); animation: spin .8s linear infinite; }
+    li.bg .ic { border: 2px solid var(--track); border-top-color: var(--muted); animation: spin 1.6s linear infinite; }
+    li.bg .detail { white-space: normal; }
+    li.done .ic { background: var(--accent); }
+    li.done .ic::after { content: ""; position: absolute; left: 4.5px; top: 2px; width: 3px; height: 6.5px; border: solid var(--bg); border-width: 0 1.8px 1.8px 0; transform: rotate(45deg); }
+    li.skip .ic::after { content: ""; position: absolute; left: 3px; top: 6px; width: 8px; height: 1.6px; background: var(--muted); }
+    li.error .ic { background: var(--err); }
+    li.error .ic::after { content: "!"; position: absolute; inset: 0; color: var(--bg); font: 700 10px/14px var(--font); text-align: center; }
+    .bar { grid-column: 2; height: 4px; margin: 6px 0 2px; background: var(--track); border-radius: 2px; overflow: hidden; }
+    .bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+    footer { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; border-top: 1px solid var(--rule); padding-top: 10px; }
+    #elapsed { font-family: var(--mono); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { li.run .ic { animation: none; border-color: var(--accent); } .bar > i { transition: none; } }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="icon.png" alt="">
+    <div>
+      <div class="name">czek-ai<span class="ver" id="ver"></span></div>
+      <div class="title" id="title"></div>
+    </div>
+  </header>
+  <ol id="steps" aria-live="polite"></ol>
+  <footer><span id="hint"></span><span id="elapsed">0:00</span></footer>
+  <script src="splash.js"></script>
+</body>
+</html>

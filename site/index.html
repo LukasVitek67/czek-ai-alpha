@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>czek-ai tierlist</title>
+<meta name="description" content="Které free AI modely teď opravdu fungují. Anonymní statistiky z aplikace czek-ai, aktualizované průběžně.">
+<style>
+  :root {
+    --bg: #f6f5f2; --surface: #ffffff; --text: #1d1d1b; --muted: #5e5d58; --line: #dedcd5;
+    --good: #1f6b3e; --mid: #8a5a00; --bad: #a8321f; --accent: #1d1d1b;
+    --r: 8px;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #161615; --surface: #1f1f1d; --text: #ecebe6; --muted: #a3a29b; --line: #34332f;
+      --good: #6cc48f; --mid: #e0b257; --bad: #ef8a76; --accent: #ecebe6; color-scheme: dark; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 32px 16px 48px; }
+  h1 { font-size: clamp(26px, 4vw, 36px); line-height: 1.15; margin: 0 0 8px; letter-spacing: -0.01em; }
+  h2 { font-size: 19px; margin: 40px 0 8px; }
+  p { max-width: 68ch; margin: 0 0 12px; }
+  .lead { color: var(--muted); }
+  .stats { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 20px 0 16px; color: var(--muted); font-size: 15px; }
+  .stats b { color: var(--text); font-variant-numeric: tabular-nums; }
+  .filter { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+  .filter input { flex: 1 1 220px; min-width: 0; padding: 9px 12px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); color: var(--text); font: inherit; }
+  .filter select { padding: 9px 12px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); color: var(--text); font: inherit; }
+  table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 13px; font-weight: 600; color: var(--muted); }
+  tr:last-child td { border-bottom: 0; }
+  td.num, th.num { text-align: right; white-space: nowrap; }
+  .model { font-weight: 600; overflow-wrap: anywhere; }
+  .prov { color: var(--muted); font-size: 13px; }
+  .state { font-weight: 600; white-space: nowrap; }
+  .s-good { color: var(--good); } .s-mid { color: var(--mid); } .s-bad { color: var(--bad); } .s-few { color: var(--muted); font-weight: 400; }
+  .note { color: var(--muted); font-size: 13px; }
+  .empty { padding: 24px 12px; color: var(--muted); }
+  footer { margin-top: 40px; color: var(--muted); font-size: 14px; }
+  @media (max-width: 640px) {
+    thead { display: none; }
+    table, tbody, td { display: block; width: 100%; }
+    tr { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; padding: 12px; border-bottom: 1px solid var(--line); }
+    tr:last-child { border-bottom: 0; }
+    td { border: 0; padding: 0; text-align: left !important; font-size: 15px; }
+    td:first-child, td:nth-child(2) { grid-column: 1 / -1; }
+    td:nth-child(2) { margin-bottom: 4px; }
+    td[data-k]::before { content: attr(data-k) " "; color: var(--muted); }
+    td:nth-child(2)::before { content: none; }
+    td.hide-m { display: none; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Které free modely teď fungují</h1>
+  <p class="lead">Anonymní statistiky z aplikace czek-ai: každá instalace průběžně hlásí, které modely odpověděly a které ne. Tabulka je za posledních 72 hodin a obnovuje se každých 5 minut.</p>
+
+  <div class="stats" id="stats" aria-live="polite">Načítám…</div>
+
+  <div class="filter">
+    <input id="q" type="search" placeholder="Hledat model nebo poskytovatele" aria-label="Hledat model nebo poskytovatele">
+    <select id="f" aria-label="Filtr">
+      <option value="all">Všechny modely</option>
+      <option value="good">Jen fungující</option>
+      <option value="bad">Jen nefungující</option>
+    </select>
+  </div>
+
+  <table>
+    <thead><tr>
+      <th>Model</th><th>Stav</th><th class="num">Úspěšnost</th><th class="num">Instalací</th><th class="num">Volání</th><th class="num">Medián</th><th>Naposledy funguje</th>
+    </tr></thead>
+    <tbody id="rows"><tr><td colspan="7" class="empty">Načítám…</td></tr></tbody>
+  </table>
+  <p class="note">Stav „málo dat“: model hlásí méně než 3 instalace. Medián je doba celé odpovědi.</p>
+
+  <h2>Odkud data jsou</h2>
+  <p>Aplikace czek-ai posílá jen název modelu, počet povedených a nepovedených volání (z toho vyčerpaný limit, chybějící kredit a vypršený čas) a medián doby odpovědi. Neposílá dotazy, odpovědi, klíče ani nic o uživateli. Odesílání jde v aplikaci vypnout v menu czek-ai.</p>
+  <p>Jedna instalace ovlivní výsledek jen omezeně: server přijme nejvýš 4 hlášení za hodinu, každá instalace se do souhrnu počítá nejvýš 200 voláními na model a IP adresa se neukládá.</p>
+  <p>czek-ai podle těchto dat model jen odsune dozadu, když u aspoň 5 instalací skoro nefunguje. Dopředu ho posune jen vlastní měření czek-ai.</p>
+
+  <footer>czek-ai · data z posledních 72 hodin · <span id="upd"></span></footer>
+</main>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const ago = (iso) => {
+    if (!iso) return 'za 72 h ne';
+    const min = Math.round((Date.now() - Date.parse(iso)) / 60000);
+    if (min < 2) return 'teď';
+    if (min < 60) return `před ${min} min`;
+    const h = Math.round(min / 60);
+    return h < 48 ? `před ${h} h` : `před ${Math.round(h / 24)} dny`;
+  };
+  const fmtMs = (ms) => (ms == null ? '–' : ms < 1000 ? `${ms} ms` : `${(ms / 1000).toFixed(1).replace('.', ',')} s`);
+  // stejné pravidlo jako appka (src/publicTier.js demoted): ≥ 5 instalací, ≥ 30 volání, úspěšnost < 25 %, 6 h bez úspěchu
+  const demoted = (m) => {
+    const calls = m.ok + m.fail;
+    return m.installs >= 5 && calls >= 30 && m.ok / calls < 0.25 && !(m.last_ok && Date.now() - Date.parse(m.last_ok) < 6 * 3600000);
+  };
+  const state = (m) => {
+    const calls = m.ok + m.fail;
+    const s = calls ? m.ok / calls : 0;
+    if (demoted(m)) return ['Nefunguje, czek-ai ho odsouvá', 's-bad', 'bad'];
+    if (m.installs < 3) return ['Málo dat', 's-few', 'few'];
+    if (s >= 0.85) return ['Funguje', 's-good', 'good'];
+    if (s >= 0.6) return ['Většinou funguje', 's-mid', 'good'];
+    if (s >= 0.3) return ['Často selhává', 's-mid', 'bad'];
+    return ['Nefunguje', 's-bad', 'bad'];
+  };
+  let all = [];
+  const render = () => {
+    const q = $('q').value.trim().toLowerCase();
+    const f = $('f').value;
+    const list = all.filter((m) => (!q || m.model.toLowerCase().includes(q)) && (f === 'all' || state(m)[2] === f));
+    if (!list.length) { $('rows').innerHTML = `<tr><td colspan="7" class="empty">${all.length ? 'Nic neodpovídá filtru.' : 'Zatím žádná data. Objeví se, jakmile czek-ai pošle první statistiky.'}</td></tr>`; return; }
+    $('rows').innerHTML = list.map((m) => {
+      const [label, cls] = state(m);
+      const calls = m.ok + m.fail;
+      const [prov, ...rest] = m.model.split('/');
+      const name = rest.join('/') || prov;
+      const pct = calls ? `${Math.round((m.ok / calls) * 100)} %` : '–';
+      const why = [m.rate_limited && `limit ${m.rate_limited}×`, m.no_credit && `kredit ${m.no_credit}×`, m.timeout && `čas ${m.timeout}×`].filter(Boolean).join(', ');
+      return `<tr>
+        <td><div class="model">${esc(name)}</div><div class="prov">${esc(prov)}</div></td>
+        <td data-k="Stav"><span class="state ${cls}">${label}</span>${why ? `<div class="note">${esc(why)}</div>` : ''}</td>
+        <td class="num" data-k="Úspěšnost">${pct}</td>
+        <td class="num" data-k="Instalací">${m.installs}</td>
+        <td class="num hide-m" data-k="Volání">${calls}</td>
+        <td class="num" data-k="Medián">${fmtMs(m.p50_ms)}</td>
+        <td data-k="Naposledy funguje">${ago(m.last_ok)}</td>
+      </tr>`;
+    }).join('');
+  };
+  const load = async () => {
+    try {
+      const r = await fetch('/api/tierlist', { cache: 'no-store' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const j = await r.json();
+      all = (j.models || []).map((m) => ({ ...m, ok: Number(m.ok) || 0, fail: Number(m.fail) || 0, installs: Number(m.installs) || 0 }));
+      all.sort((a, b) => (state(a)[2] === 'few') - (state(b)[2] === 'few') || (b.ok / Math.max(1, b.ok + b.fail)) - (a.ok / Math.max(1, a.ok + a.fail)) || b.installs - a.installs);
+      const inst = all.reduce((x, m) => Math.max(x, m.installs), 0);
+      const working = all.filter((m) => state(m)[2] === 'good').length;
+      $('stats').innerHTML = `<span><b>${all.length}</b> modelů</span><span><b>${working}</b> funguje</span><span>až <b>${inst}</b> instalací na model</span>`;
+      $('upd').textContent = 'aktualizováno ' + new Date(j.updated).toLocaleString('cs-CZ');
+      render();
+    } catch (e) {
+      $('stats').textContent = 'Data se teď nepodařilo načíst. Zkus to za chvíli.';
+      $('rows').innerHTML = '<tr><td colspan="7" class="empty">Data se nepodařilo načíst.</td></tr>';
+    }
+  };
+  $('q').addEventListener('input', render);
+  $('f').addEventListener('change', render);
+  load();
+  setInterval(load, 5 * 60000);
+})();
+</script>
+</body>
+</html>

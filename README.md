@@ -33,7 +33,13 @@ agenta, který umí opravdu pracovat na kódu – a aby ho celá třída mohla s
   u tebe v počítači.
 - Když klíč omylem unikne: **hned ho u poskytovatele zruš a vytvoř nový.** Smazání z gitu nestačí.
 
-## Rychlý start (Windows)
+## Stažení (Windows)
+
+**[⬇ Stáhnout instalátor z Releases](https://github.com/LukasVitek67/czek-ai-alpha/releases/latest)** – `czek-ai-…-setup.exe`
+(doporučeno, bez práv správce) nebo přenosné `…-portable.exe`. Je to ALPHA a exe není podepsané, takže SmartScreen:
+*Další informace → Přesto spustit*. Linuxová verze zatím není.
+
+## Ze zdrojáků (Windows)
 
 Potřebuješ [Node.js](https://nodejs.org) 22+ a [Git](https://git-scm.com).
 

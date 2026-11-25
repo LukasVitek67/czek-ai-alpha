@@ -28,7 +28,7 @@ delete env.OPENCODE_CONFIG_DIR;
 const PLUG = !!process.env.PLUG;
 if (process.env.WIZ === '1') env.ZDARMA_WIZARD = '1';
 if (PLUG) { env.ZDARMA_IGNORE_SYSTEM_GIT = '1'; env.ZDARMA_IGNORE_SYSTEM_NODE = '1'; }
-if (!process.env.KEEP_PATH) env.PATH = String(process.env.PATH).split(path.delimiter).filter((d) => !fs.existsSync(path.join(d, 'opencode.exe'))).join(path.delimiter);
+if (!process.env.KEEP_PATH) env.PATH = String(process.env.PATH).split(path.delimiter).filter((d) => !fs.existsSync(path.join(d, 'opencode.exe')) && !fs.existsSync(path.join(d, 'opencode'))).join(path.delimiter);
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 // OFFLINE_MS=25000: prvních N ms „bez internetu“ (lokální registr npm zavírá spojení), pak propouští na
@@ -82,7 +82,8 @@ async function cdp(t, method, params = {}) {
   const exe = process.env.APP_EXE || require('electron');
   const args = process.env.APP_EXE ? [`--remote-debugging-port=${cdpPort}`] : ['.', `--remote-debugging-port=${cdpPort}`];
   if (OFFLINE_MS) { while (!/:\d{2,}$/.test(env.ZDARMA_NPM_REGISTRY)) await wait(20); offline.start = Date.now(); }
-  const child = spawn(exe, args, { cwd: root, env, windowsHide: true, stdio: 'ignore' });
+  // Linux: vlastní skupina procesů, ať úklid zabije i OpenCode/OmniRoute (dřív po testu běžely dál a držely porty)
+  const child = spawn(exe, args, { cwd: root, env, windowsHide: true, stdio: 'ignore', detached: process.platform !== 'win32' });
   const t0 = Date.now();
   const seen = { splashAt: 0, downloadShot: false, steps: null, ocAt: 0, wizAt: 0, splashGoneAt: 0, omniPct: 0, omniDetail: '', omniShot: false };
   try {
@@ -121,7 +122,7 @@ async function cdp(t, method, params = {}) {
     assert.ok(seen.splashGoneAt, 'splash closed after OpenCode window');
     if (!process.env.OPENCODE_BIN) {
       assert.match(log, /\[install\] OpenCode nainstalován/, 'auto-install in log');
-      assert.ok(fs.existsSync(path.join(env.ZDARMA_USER_DATA, 'opencode-bin', 'opencode.exe')), 'binary in app data');
+      assert.ok(fs.existsSync(path.join(env.ZDARMA_USER_DATA, 'opencode-bin', process.platform === 'win32' ? 'opencode.exe' : 'opencode')), 'binary in app data');
       if (!CLASS) assert.ok(seen.downloadShot, 'download progress was visible');
     }
     if (!env.ZDARMA_OMNIROUTE_ROOT) {
@@ -147,8 +148,10 @@ async function cdp(t, method, params = {}) {
     }
     console.log(`app-splash OK (úvodní okno za ${seen.splashAt} ms, OpenCode okno za ${Math.round(seen.ocAt / 1000)} s, poslední kroky ${JSON.stringify(seen.steps)})`);
     if (PLUG) {
-      assert.match(log, /\[install\] Git Bash nainstalován/, 'PortableGit installed');
-      assert.ok(fs.existsSync(path.join(env.ZDARMA_USER_DATA, 'git', 'bin', 'bash.exe')));
+      if (process.platform === 'win32') { // na Linuxu je bash systémový, PortableGit se neinstaluje
+        assert.match(log, /\[install\] Git Bash nainstalován/, 'PortableGit installed');
+        assert.ok(fs.existsSync(path.join(env.ZDARMA_USER_DATA, 'git', 'bin', 'bash.exe')));
+      }
       const cfgFile = path.join(env.XDG_CONFIG_HOME, 'opencode', 'opencode.json');
       let switched = false, lg = '';
       for (let i = 0; i < 1200 && !switched; i++) { // až 20 min
@@ -172,7 +175,12 @@ async function cdp(t, method, params = {}) {
     }
     console.log('snímky:', shots);
   } finally {
-    if (process.platform === 'win32') { try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {} } else { try { child.kill('SIGKILL'); } catch {} }
+    if (process.platform === 'win32') { try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {} } else {
+      try { process.kill(-child.pid, 'SIGTERM'); } catch {} // appka ukončí OpenCode a OmniRoute sama
+      await wait(4000);
+      try { process.kill(-child.pid, 'SIGKILL'); } catch {}
+      try { child.kill('SIGKILL'); } catch {}
+    }
     if (!process.env.SPLASH_SHOTS) setTimeout(() => { try { fs.rmSync(base, { recursive: true, force: true }); } catch {} }, 2000);
   }
 })().catch((e) => { console.error(e); process.exitCode = 1; });

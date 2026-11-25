@@ -97,6 +97,7 @@ function findNode() {
   if (WIN) cands.push(path.join(process.env.ProgramFiles || 'C:\\Program Files', 'nodejs', 'node.exe'));
   if (process.env.ZDARMA_IGNORE_SYSTEM_NODE) cands.length = 0; // test: chovat se jako PC bez Node
   if (local.nodeDir) cands.push(path.join(local.nodeDir, WIN ? 'node.exe' : 'node'));
+  if (local.nodeDir && !WIN) cands.push(path.join(local.nodeDir, 'bin', 'node')); // přenosný Node pro Linux (installer.installNodeLinux)
   for (const c of cands) {
     if (!fs.existsSync(c)) continue;
     const v = spawnSync(c, ['--version'], { encoding: 'utf8', windowsHide: true }).stdout?.trim() || '';

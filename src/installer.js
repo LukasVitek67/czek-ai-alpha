@@ -166,7 +166,21 @@ const NODE = {
   version: '24.22.1', // LTS „Krypton“, 20. 10. 2026; OmniRoute chce >=22.22.2 <23 || >=24 <27
   sha256: 'd2046d28c2c3dcd211ac5145c0bf30e2047ef9dfb306693c8c6e2eccd8b95fa5',
   url: () => `https://nodejs.org/dist/v${NODE.version}/node-v${NODE.version}-win-x64.zip`,
+  // Linux x64 (25. 11.): stejná verze, součet z https://nodejs.org/dist/v24.22.1/SHASUMS256.txt
+  linuxSha256: '6c172a9ab6718f7b801fb5a7bd486af2ee5e32758086a04b84fcce2aa77095e6',
+  linuxUrl: () => `https://nodejs.org/dist/v${NODE.version}/node-v${NODE.version}-linux-x64.tar.xz`,
 };
+/** npm-cli.js k danému Node: přenosný Windows (node.exe + node_modules/npm vedle) i Linux (bin/node + lib/node_modules/npm). */
+function npmCliFor(node) {
+  const dirs = [path.dirname(node)];
+  try { dirs.push(path.dirname(fs.realpathSync(node))); } catch {}
+  for (const d of dirs) {
+    for (const c of [path.join(d, 'node_modules', 'npm', 'bin', 'npm-cli.js'), path.join(d, '..', 'lib', 'node_modules', 'npm', 'bin', 'npm-cli.js')]) {
+      if (fs.existsSync(c)) return c;
+    }
+  }
+  return null;
+}
 const GIT = {
   version: '2.56.0.4', // Git for Windows 2.56.0.windows.4, 26. 10. 2026 (PortableGit, bez instalace a admina)
   sha256: 'b1f3e52216e2ed6882d1bebfd4d3fdf319bec40d2edbbf9fd26ec4fd3fce7ed1',
@@ -193,7 +207,8 @@ async function fetchVerified(what, url, sha256, progress, signal) {
 /** Přenosný Node.js do dir (dir/node.exe + npm). Bez instalace, bez admina, nic v PATH. */
 async function installNode(o) {
   const progress = o.onProgress || (() => {});
-  if (process.platform !== 'win32' || process.arch !== 'x64') throw new Error('přenosný Node.js jen pro Windows x64');
+  if (process.platform === 'linux' && process.arch === 'x64') return installNodeLinux(o, progress);
+  if (process.platform !== 'win32' || process.arch !== 'x64') throw new Error('přenosný Node.js jen pro Windows a Linux x64');
   const buf = await fetchVerified('Node.js', NODE.url(), NODE.sha256, progress, o.signal);
   progress({ phase: 'extract', what: 'Node.js' });
   const part = o.dir + '.part';
@@ -212,6 +227,27 @@ async function installNode(o) {
   fs.renameSync(inner, o.dir);
   rmrf(part);
   return path.join(o.dir, 'node.exe');
+}
+
+/** Přenosný Node.js pro Linux x64 do dir (dir/bin/node + dir/lib/node_modules/npm). Bez sudo, nic v PATH. */
+async function installNodeLinux(o, progress) {
+  const buf = await fetchVerified('Node.js', NODE.linuxUrl(), NODE.linuxSha256, progress, o.signal);
+  progress({ phase: 'extract', what: 'Node.js' });
+  const part = o.dir + '.part';
+  rmrf(part);
+  fs.mkdirSync(part, { recursive: true });
+  const tarball = path.join(part, 'node.tar.xz');
+  fs.writeFileSync(tarball, buf);
+  const r = spawnSync('tar', ['-xJf', tarball, '-C', part], { encoding: 'utf8', timeout: 300000 });
+  if (r.status !== 0) throw new Error('rozbalení Node.js selhalo: ' + String(r.stderr || r.error || '').slice(0, 300));
+  fs.unlinkSync(tarball);
+  const inner = path.join(part, `node-v${NODE.version}-linux-x64`);
+  const v = spawnSync(path.join(inner, 'bin', 'node'), ['--version'], { encoding: 'utf8', timeout: 30000 }).stdout?.trim();
+  if (v !== 'v' + NODE.version) throw new Error('přenosný Node.js se nespustil');
+  rmrf(o.dir);
+  fs.renameSync(inner, o.dir);
+  rmrf(part);
+  return path.join(o.dir, 'bin', 'node');
 }
 
 /** Přenosný Git for Windows do dir (dir/bin/bash.exe = Git Bash pro nástroj bash v OpenCode). */
@@ -256,8 +292,8 @@ async function installOmniroute(o) {
     }
   }
   const node = o.node;
-  const npmCli = path.join(path.dirname(node), 'node_modules', 'npm', 'bin', 'npm-cli.js');
-  if (!fs.existsSync(npmCli)) throw new Error(`u Node.js (${node}) chybí npm`);
+  const npmCli = npmCliFor(node);
+  if (!npmCli) throw new Error(`u Node.js (${node}) chybí npm`);
   const part = o.dir + '.part';
   rmrf(part);
   fs.mkdirSync(part, { recursive: true });

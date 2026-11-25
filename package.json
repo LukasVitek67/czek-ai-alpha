@@ -12,7 +12,8 @@
     "dist": "electron-builder --win portable --x64",
     "dist:setup": "electron-builder --win nsis --x64",
     "desktop": "node tools/to-desktop.js",
-    "dist:desktop": "npm run dist && npm run desktop"
+    "dist:desktop": "npm run dist && npm run desktop",
+    "dist:linux": "electron-builder --linux AppImage tar.gz deb --x64"
   },
   "dependencies": {
     "marked": "^15.0.12"
@@ -49,6 +50,18 @@
       "icon": "build/icon.png",
       "artifactName": "czek-ai-${version}-portable.${ext}"
     },
+    "linux": {
+      "target": [
+        "AppImage",
+        "tar.gz",
+        "deb"
+      ],
+      "icon": "build/icon.png",
+      "category": "Development",
+      "synopsis": "OpenCode + OmniRoute: free AI coding agent",
+      "artifactName": "czek-ai-${version}-linux-${arch}.${ext}",
+      "maintainer": "LukasVitek67"
+    },
     "extraResources": [
       {
         "from": "skills",
@@ -70,6 +83,10 @@
       "shortcutName": "czek-ai",
       "deleteAppDataOnUninstall": false,
       "include": "build/installer.nsh"
+    },
+    "deb": {
+      "artifactName": "czek-ai-${version}-linux-${arch}.${ext}"
     }
-  }
+  },
+  "homepage": "https://github.com/LukasVitek67/czek-ai-alpha"
 }

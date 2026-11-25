@@ -37,7 +37,18 @@ agenta, který umí opravdu pracovat na kódu – a aby ho celá třída mohla s
 
 **[⬇ Stáhnout instalátor z Releases](https://github.com/LukasVitek67/czek-ai-alpha/releases/latest)** – `czek-ai-…-setup.exe`
 (doporučeno, bez práv správce) nebo přenosné `…-portable.exe`. Je to ALPHA a exe není podepsané, takže SmartScreen:
-*Další informace → Přesto spustit*. Linuxová verze zatím není.
+*Další informace → Přesto spustit*.
+
+## Stažení (Linux x64, od 0.15.42)
+
+Z [Releases](https://github.com/LukasVitek67/czek-ai-alpha/releases/latest):
+
+- **Ubuntu / Debian:** `czek-ai-…-linux-amd64.deb` → `sudo apt install ./czek-ai-…-linux-amd64.deb`, pak czek-ai v menu aplikací.
+- **Jakékoli distro bez instalace:** `czek-ai-…-linux-x64.tar.gz` → rozbal a spusť `./czek-ai`.
+- **AppImage:** `czek-ai-…-linux-x86_64.AppImage` → `chmod +x` a spusť. Na Ubuntu 24.04+ chybí FUSE 2: buď
+  `sudo apt install libfuse2t64`, nebo spusť s `--appimage-extract-and-run`.
+
+První start si sám stáhne Node.js, OpenCode a OmniRoute do tvého profilu (bez sudo, ~2–3 min). Bash a git bere ze systému.
 
 ## Ze zdrojáků (Windows)
 
@@ -64,7 +75,7 @@ Vylepšovat appku můžeš ty, já i učitel – klidně s pomocí AI asistenta.
 
 - Poctivé hodnocení po oblastech s čísly z měření: [docs/SCORECARD.md](docs/SCORECARD.md).
 - Technický přehled všech funkcí: [docs/TECHNICKY-PREHLED.md](docs/TECHNICKY-PREHLED.md).
-- Ověřeno hlavně na Windows (cílová platforma) a částečně na Linuxu (testy, měření). Mac neověřen.
+- Ověřeno hlavně na Windows (cílová platforma). Linux: sestavené balíčky ověřené na čistém Ubuntu 26.04 (první start, instalace, okno agenta), skutečné používání zatím málo. Mac neověřen.
 
 ### Známé problémy alpha verze
 

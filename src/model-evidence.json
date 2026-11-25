@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-23T16:41:10.191Z",
+ "updated": "2026-11-25T21:00:52.138Z",
  "maxAgeDays": 45,
  "minRate": 0.5,
  "models": {
@@ -196,6 +196,13 @@
     "fixture": "project",
     "at": "2026-11-23T16:28:57.879Z",
     "source": "docs/research/2026-11-22-claude-e2e/results/czek-project-zdarma-max-hedge-0.json"
+   },
+   {
+    "ok": true,
+    "wallS": 315.3,
+    "fixture": "repo",
+    "at": "2026-11-25T19:52:06.694Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-repo-zdarma-max-repo-0.15.42a.json"
    }
   ],
   "north-mini-code": [
@@ -246,6 +253,13 @@
     "fixture": "feature",
     "at": "2026-11-22T00:48:01.336Z",
     "source": "docs/research/2026-11-22-claude-e2e/results/e2e-feature-zai-glm-4.5-flash.json"
+   },
+   {
+    "ok": true,
+    "wallS": 795.8,
+    "fixture": "session",
+    "at": "2026-11-25T20:00:00.524Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-session-zdarma-max-session-0.15.42.json"
    }
   ],
   "particle-1": [
@@ -413,6 +427,13 @@
     "fixture": "session",
     "at": "2026-11-22T23:02:14.055Z",
     "source": "docs/research/2026-11-22-claude-e2e/results/czek-session-zdarma-max-sticky-on.json"
+   },
+   {
+    "ok": true,
+    "wallS": 40.2,
+    "fixture": "repo",
+    "at": "2026-11-25T19:58:20.775Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-repo-zdarma-max-repo-0.15.42b.json"
    }
   ],
   "ministral-14b-2512": [

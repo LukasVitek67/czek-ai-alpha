@@ -190,9 +190,15 @@ const OMNI_VERSION = '3.8.53'; // otestovaná verze (src/omniroute.js na ni sed�
 // Průběh instalace omniroute@3.8.53 v úvodním okně (změřeno 14. 11.; při změně verze přeměřit, viz HANDOFF):
 const OMNI_META = 1388; // řádků npm http při zjišťování balíčků (bez .tgz)
 const OMNI_PKGS = 1327; // řádků npm http …tgz (staženo / z cache)
-const OMNI_BYTES = 2624 * 1048576; // o kolik ubylo místa na disku při rozbalení (1 měření 14. 11., konec instalace nedoběhl; neověřené)
+const OMNI_BYTES = 2624 * 1048576; // o kolik ubylo místa na disku při rozbalení (měřeno 14. 11.; SLIM_PRUNE maže až potom)
 const OMNI_SCRIPTS = 7; // instalačních skriptů (@parcel/watcher, @swc/core, esbuild, keytar, omniroute, onnxruntime-node, protobufjs)
 
+// Štíhlá instalace (25. 11.): npm install je plný (všechny nativní binárky pro platformu, better-sqlite3, sharp…),
+// pak se smažou jen volitelné balíky pro lokální embeddingy, které czek-ai nikdy nezapne (smazaná volitelná závislost =
+// stejný stav, jako když se nepovede nainstalovat, OmniRoute s ním počítá), a přeložená dokumentace. `--omit=optional`
+// NE: vyhodí i @esbuild/@img/@next/@swc/@parcel binárky a better-sqlite3 (docs/research/2026-11-23-omniroute-slim).
+// Cesty relativně ke složce instalace.
+const SLIM_PRUNE = ['node_modules/onnxruntime-node', 'node_modules/onnxruntime-web', 'node_modules/@huggingface/transformers', 'node_modules/omniroute/dist/docs/i18n'];
 const rmrf = (p) => { try { fs.rmSync(p, { recursive: true, force: true, maxRetries: 3 }); } catch {} };
 const TAR = () => (process.platform === 'win32' ? path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe') : 'tar');
 
@@ -306,6 +312,8 @@ async function installOmniroute(o) {
   //  - rozbalení: o kolik ubylo volného místa na disku od začátku stahování (jedno volání statfs; spočítat
   //    soubory trvá 103 s, počet složek balíčků je hotový už za třetinu času);
   //  - instalační skripty: „npm info run <balíček>@<verze> <událost> <cesta> <příkaz>“ a konec „… { code: 0 …“.
+  // ZDARMA_OMNI_FULL=1 (nebo o.full) = nic nemazat (SLIM_PRUNE výše).
+  const full = o.full ?? process.env.ZDARMA_OMNI_FULL === '1';
   const args = [npmCli, 'install', `omniroute@${o.version || OMNI_VERSION}`, '--omit=dev', '--no-audit', '--no-fund', '--loglevel=info', '--prefix', part];
   // Složka pro třídu: cache npm se nejdřív zkopíruje k sobě (sdílený disk bývá jen pro čtení a npm do cache
   // zapisuje), pak instalace z ní; co v ní chybí, stáhne npm normálně. o.cacheOut = plnění cache (--priprav-tridu).
@@ -365,6 +373,7 @@ async function installOmniroute(o) {
   if (cacheCopy) rmrf(cacheCopy);
   const bin = path.join(part, 'node_modules', 'omniroute', 'bin', 'omniroute.mjs');
   if (code !== 0 || !fs.existsSync(bin)) { rmrf(part); throw new Error(`npm install omniroute skončil chybou (kód ${code})`); }
+  if (!full) for (const p of SLIM_PRUNE) rmrf(path.join(part, ...p.split('/')));
   rmrf(o.dir);
   fs.renameSync(part, o.dir);
   return path.join(o.dir, 'node_modules', 'omniroute');

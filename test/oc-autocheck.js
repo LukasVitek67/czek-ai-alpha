@@ -130,7 +130,7 @@ const { findOpencode, serveEnv } = require('../src/opencodeServer');
     assert.strictEqual(n, 4, 'no further continue after a clean build (Done.)');
     console.log(`oc-autocheck OK (2 edity naráz → 1× cargo check, zbývá 1 chyba s plnou hláškou rustc; po opravě bez chyb; konec s rozbitým buildem → guard pokračuje; todowrite není; zai přes OmniRoute; ${secs} s)`);
   } finally {
-    try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {}
+    if (process.platform === 'win32') { try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {} } else { try { child.kill('SIGKILL'); } catch {} }
     up.close();
     setTimeout(() => { try { fs.rmSync(base, { recursive: true, force: true }); } catch {} }, 1500);
   }

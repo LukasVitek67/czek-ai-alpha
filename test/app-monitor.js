@@ -129,7 +129,7 @@ const re = (k) => new RegExp(T(k).split(/\{\w+\}/).map((p) => p.replace(/[.*+?^$
     assert.ok(snap && Array.isArray(snap.models) && snap.components.length >= 6, 'logs/monitor-now.json written');
     console.log(`app-monitor OK (součásti v pořádku, ${st.models.length} modely, ${st.calls} volání, detail s dotazem i odpovědí, záznam ${Math.round(all.length / 1024)} kB bez klíčů, monitor-now.json)`);
   } finally {
-    try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {}
+    if (process.platform === 'win32') { try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {} } else { try { child.kill('SIGKILL'); } catch {} }
     setTimeout(() => { try { fs.rmSync(rep.base, { recursive: true, force: true }); fs.rmSync(work, { recursive: true, force: true }); } catch {} }, 3000);
   }
 })().catch((e) => { console.error(e); process.exitCode = 1; });

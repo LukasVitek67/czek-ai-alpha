@@ -63,7 +63,7 @@ const { findOpencode, serveEnv } = require('../src/opencodeServer');
     assert.ok(chat >= 2 && chat <= 5, 'upstream attempts: ' + chat);
     console.log(`oc-guard-retry OK (529 dokola: ${chat} pokusy, relace idle za ${secs} s)`);
   } finally {
-    try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {}
+    if (process.platform === 'win32') { try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {} } else { try { child.kill('SIGKILL'); } catch {} }
     up.close();
     setTimeout(() => { try { fs.rmSync(base, { recursive: true, force: true }); } catch {} }, 1500);
   }

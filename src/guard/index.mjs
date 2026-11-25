@@ -73,6 +73,14 @@ export const CzekGuard = async (ctx, options) => {
   // OpenCode takovou chybu nezopakuje (ověřeno test/oc-race.js) a relace by stála; guard pošle pokračování.
   const STALLED_TEXT = 'The model stopped responding in the middle of your previous step, so that step was cancelled. Continue the task from where it stopped (repeat the last tool call if it did not run).';
   const BROKEN_TEXT = (n) => `The project still does not compile: the last check after your edit reported ${n} error${n > 1 ? 's' : ''}, so the task is not finished. Continue fixing ${n > 1 ? 'them' : 'it'} now, using the full compiler message from that check (read its note/help lines). If you truly cannot go on without the user, ask one concrete question instead of stopping.`;
+  // Slíbil, ale nic neudělal: uživatel zadal úkol („udělej mi web“), model napsal „jasně, tady to máš“ / „hotovo“
+  // (nebo kód jen do chatu) a skončil bez jediného nástroje → v projektu nic nevzniklo. Hlášení 25. 11. (kamarád
+  // uživatele: po odmítnuté první zprávě druhá „udělej web“ → „jasně“ a konec). Jednou za zadání uživatele.
+  const ACTION_ASK = /(?:^|[^\p{L}])(?:ud[eě]lej|vytvo[rř]|napi[sš]|naprogramuj|nak[oó]duj|postav|p[rř]idej|oprav|uprav|p[rř]ed[eě]lej|vygeneruj|nainstaluj|spus[tť]|dod[eě]lej|make|create|build|write|add|fix|implement|generate|code|refactor|install)(?![\p{L}])/iu;
+  const PROMISE = /tady (to )?(m[aá][sš]|je)|hotovo|jasn[eě]|vytvo[rř](il|ím|im)|ud[eě]l(al|ám|am)|p[rř]ipravil|nap[ií][sš](u|e)|here('s| is| you go)|i('ll| will) (now )?(create|build|make|write|add|fix)|let me|sure|done|i('ve| have) (created|built|made|written|added|fixed)|```/i;
+  const REFUSE = /neud[eě]l[aá]m|nem[uů][zž]u|nemohu|nepom[uů][zž]u|can'?t help|cannot|won'?t|i'?m (not able|unable)|unable to/i;
+  const PROMISED_TEXT = 'You answered as if the task was done (or showed code in the chat), but you did not call any tool, so nothing was created or changed in the project. Do the task now with your tools: write/edit the files and run what is needed. If you truly need something from the user first, ask one concrete question.';
+  const askOf = new Map(); // sessionID → { action: zadání uživatele je úkol, tool: v tomto kole proběhl nástroj, sent }
   const autoContinue = (id, la, why = 'length') => {
     if (!la.providerID || !la.modelID) return;
     const now = Date.now();
@@ -86,11 +94,12 @@ export const CzekGuard = async (ctx, options) => {
     }
     continued.set(id, [...recent, now]);
     const errs = broken.get(id) || 0;
-    glog('continue', why === 'tooltext' ? `odpověď relace ${id} obsahovala volání nástroje jako text → posílám výzvu zavolat ho správně (${recent.length + 1}. za 10 min)`
+    glog('continue', why === 'promised' ? `relace ${id}: model odpověděl, jako by úkol udělal, ale nezavolal žádný nástroj → posílám výzvu udělat ho opravdu (${recent.length + 1}. za 10 min)`
+      : why === 'tooltext' ? `odpověď relace ${id} obsahovala volání nástroje jako text → posílám výzvu zavolat ho správně (${recent.length + 1}. za 10 min)`
       : why === 'stalled' ? `model v relaci ${id} zmlkl uprostřed odpovědi (závod modelů krok ukončil) → posílám pokračování (${recent.length + 1}. za 10 min)`
       : why === 'broken' ? `relace ${id} skončila, ale projekt nejde přeložit (${errs} chyb po posledním editu) → posílám pokračování (${recent.length + 1}. za 10 min)`
         : `odpověď relace ${id} skončila limitem výstupu → posílám pokračování (${recent.length + 1}. za 10 min)`, { session: id, ...model, agent: la.agent, count: recent.length + 1, why, ...(why === 'broken' ? { errors: errs } : {}) });
-    const text = why === 'tooltext' ? TOOLTEXT_TEXT : why === 'broken' ? BROKEN_TEXT(errs) : why === 'stalled' ? STALLED_TEXT : CONTINUE_TEXT;
+    const text = why === 'promised' ? PROMISED_TEXT : why === 'tooltext' ? TOOLTEXT_TEXT : why === 'broken' ? BROKEN_TEXT(errs) : why === 'stalled' ? STALLED_TEXT : CONTINUE_TEXT;
     // až po doběhnutí obsluhy události; promptAsync jen odešle zprávu a hned vrátí (neblokuje hook)
     setTimeout(() => { ctx?.client?.session?.promptAsync({ path: { id }, body: { parts: [{ type: 'text', text }], model, ...(la.agent ? { agent: la.agent } : {}) } }).catch((e) => glog('continue-error', `pokračování relace ${id} selhalo: ${e?.message || e}`, { session: id })); }, 300);
   };
@@ -127,9 +136,15 @@ export const CzekGuard = async (ctx, options) => {
       if (output.options.reasoningEffort == null) output.options.reasoningEffort = effort;
     },
     // nová zpráva uživatele → počty „za úkol“ od nuly
-    'chat.message': async (input) => {
+    'chat.message': async (input, output) => {
       // stav překladu jen z editů v tomto kole (dotaz uživatele bez editů → žádné pokračování „oprav build“)
       if (input?.sessionID) { guardOf(input.sessionID, opts).userTurn(); lastAsst.delete(input.sessionID); broken.delete(input.sessionID); }
+      // zadání uživatele: je to úkol? (výzvy guardu samotného se nepočítají – kolo pokračuje)
+      if (input?.sessionID) {
+        const said = (output?.parts || []).filter((p) => p?.type === 'text' && !p.synthetic).map((p) => p.text || '').join(' ');
+        if (said && !said.startsWith('You answered as if') && !/^(Your previous reply|The model stopped|The project still)/.test(said)) askOf.set(input.sessionID, { action: ACTION_ASK.test(said), tool: false, sent: false });
+        if (askOf.size > 200) askOf.delete(askOf.keys().next().value);
+      }
     },
     'tool.execute.before': async (input, output) => {
       pending.set(input.callID, output.args);
@@ -217,7 +232,10 @@ export const CzekGuard = async (ctx, options) => {
           else if (la?.finish === 'stop' && !overflowIdle) {
             const rec = partsOf.get(id);
             const text = rec && rec.messageID === la.id && !rec.tool ? [...rec.texts.values()].join(' ') : null;
+            const ask = askOf.get(id);
             if (text != null && TOOL_AS_TEXT.test(text)) autoContinue(id, la, 'tooltext');
+            // úkol od uživatele, celé kolo bez nástroje, odpověď „hotovo/tady to máš“ nebo kód v chatu (ne otázka, ne odmítnutí)
+            else if (text != null && ask?.action && !ask.tool && !ask.sent && la.agent !== 'plan' && PROMISE.test(text) && !REFUSE.test(text) && !/\?\s*$/.test(text.trim())) { ask.sent = true; autoContinue(id, la, 'promised'); }
             // projekt nejde přeložit a model se uživatele neptá → pokračovat
             else if (text != null && broken.get(id) > 0 && !/\?\s*$/.test(text.trim())) autoContinue(id, la, 'broken');
           }
@@ -249,7 +267,7 @@ export const CzekGuard = async (ctx, options) => {
       if (p?.sessionID && p.messageID && (p.type === 'text' || p.type === 'reasoning' || p.type === 'tool')) {
         let rec = partsOf.get(p.sessionID);
         if (!rec || rec.messageID !== p.messageID) { rec = { messageID: p.messageID, texts: new Map(), tool: false }; partsOf.set(p.sessionID, rec); }
-        if (p.type === 'tool') rec.tool = true;
+        if (p.type === 'tool') { rec.tool = true; const a = askOf.get(p.sessionID); if (a) a.tool = true; }
         else if (typeof p.text === 'string') rec.texts.set(p.id, p.text.slice(-4000));
         if (partsOf.size > 200) partsOf.delete(partsOf.keys().next().value);
       }

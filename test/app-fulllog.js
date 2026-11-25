@@ -83,7 +83,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     assert.deepStrictEqual(missing, [], 'missing in full log: ' + missing.join(', '));
     console.log('app-fulllog OK');
   } finally {
-    try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {}
+    if (process.platform === 'win32') { try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {} } else { try { child.kill('SIGKILL'); } catch {} }
     setTimeout(() => { try { fs.rmSync(rep.base, { recursive: true, force: true }); fs.rmSync(work, { recursive: true, force: true }); } catch {} }, 3000);
   }
 })().catch((e) => { console.error(e.message || e); process.exitCode = 1; });

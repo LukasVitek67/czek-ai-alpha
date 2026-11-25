@@ -50,9 +50,145 @@
     "adhd": {
       "url": "https://github.com/ayghri/i-have-adhd",
       "license": "MIT"
+    },
+    "czek": {
+      "url": "https://github.com/LukasVitek67/czek-ai-alpha",
+      "license": "MIT"
     }
   },
   "skills": [
+    {
+      "name": "czek-method",
+      "group": "work",
+      "impact": 95,
+      "badge": "postup",
+      "source": "czek",
+      "summary": "postup práce jako zkušený inženýr + sám vybírá skills",
+      "what": "Trvale zapnutý: porozumět, načíst skills, číst kód, malé kroky, ověřit, poctivá zpráva. Podle úkolu sám načte ostatní skills (impeccable, ui-ux-pro-max, ladění…).",
+      "when": [],
+      "examples": [],
+      "needs": ""
+    },
+    {
+      "name": "czek-debugging",
+      "group": "work",
+      "impact": 70,
+      "badge": "postup",
+      "source": "czek",
+      "summary": "ladění chyb krok za krokem: reprodukce, příčina, test",
+      "what": "Chyba, pád, špatný výstup: reprodukovat, přečíst celou hlášku, najít skutečnou příčinu, opravit a dokázat testem. Bez hádání a opakování.",
+      "when": [],
+      "examples": [],
+      "needs": ""
+    },
+    {
+      "name": "czek-testing",
+      "group": "work",
+      "impact": 70,
+      "badge": "postup",
+      "source": "czek",
+      "summary": "testy, které opravdu ověří funkci",
+      "what": "Psaní a pouštění testů v nástroji, který projekt už má; okrajové případy; testy se nikdy neupravují, aby prošly.",
+      "when": [],
+      "examples": [],
+      "needs": ""
+    },
+    {
+      "name": "czek-review",
+      "group": "work",
+      "impact": 70,
+      "badge": "postup",
+      "source": "czek",
+      "summary": "kontrola vlastní práce před „hotovo“",
+      "what": "Projde vlastní změny: zadání, okrajové případy, chyby, styl, zbytky po ladění, bezpečnost, opravdu spuštěno.",
+      "when": [],
+      "examples": [],
+      "needs": ""
+    },
+    {
+      "name": "czek-refactor",
+      "group": "work",
+      "impact": 70,
+      "badge": "postup",
+      "source": "czek",
+      "summary": "úklid kódu bez změny chování",
+      "what": "Přejmenování, rozdělení, odstranění duplicit po malých krocích s testy po každém kroku.",
+      "when": [],
+      "examples": [],
+      "needs": ""
+    },
+    {
+      "name": "czek-performance",
+      "group": "work",
+      "impact": 70,
+      "badge": "postup",
+      "source": "czek",
+      "summary": "zrychlení podle měření, ne odhadu",
+      "what": "Změřit, najít úzké hrdlo, změnit jednu věc, změřit znovu. Čísla před a po.",
+      "when": [],
+      "examples": [],
+      "needs": ""
+    },
+    {
+      "name": "czek-security",
+      "group": "work",
+      "impact": 70,
+      "badge": "postup",
+      "source": "czek",
+      "summary": "bezpečnost: klíče, hesla, vstupy, SQL",
+      "what": "Klíče mimo kód, hashovaná hesla, ošetřený vstup, parametrizované SQL, bezpečné nahrávání souborů.",
+      "when": [],
+      "examples": [],
+      "needs": ""
+    },
+    {
+      "name": "czek-git",
+      "group": "work",
+      "impact": 70,
+      "badge": "postup",
+      "source": "czek",
+      "summary": "bezpečná práce s gitem v týmu",
+      "what": "Malé commity, jasné zprávy, větve, konflikty, nikdy klíče v commitu, žádné ničivé příkazy bez souhlasu.",
+      "when": [],
+      "examples": [],
+      "needs": ""
+    },
+    {
+      "name": "czek-new-project",
+      "group": "work",
+      "impact": 70,
+      "badge": "postup",
+      "source": "czek",
+      "summary": "nový projekt od nuly správně",
+      "what": "Jednoduchý ověřený stack, oficiální generátor, nejdřív běžící kostra, pak funkce po krocích, README a .gitignore.",
+      "when": [],
+      "examples": [],
+      "needs": ""
+    },
+    {
+      "name": "czek-research",
+      "group": "work",
+      "impact": 70,
+      "badge": "postup",
+      "source": "czek",
+      "summary": "nejdřív zjistit, jak knihovna funguje",
+      "what": "Ověřit nainstalovanou verzi, typy a oficiální dokumentaci; nevymýšlet funkce ani volby.",
+      "when": [],
+      "examples": [],
+      "needs": ""
+    },
+    {
+      "name": "czek-frontend",
+      "group": "work",
+      "impact": 70,
+      "badge": "postup",
+      "source": "czek",
+      "summary": "profesionální UI: design skills + ověření v prohlížeči",
+      "what": "Spojí impeccable, ui-ux-pro-max a unslop-ui s kontrolou v prohlížeči: responzivita, stavy, přístupnost, konzole bez chyb.",
+      "when": [],
+      "examples": [],
+      "needs": ""
+    },
     {
       "name": "ui-ux-pro-max",
       "group": "visual",

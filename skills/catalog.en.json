@@ -476,6 +476,83 @@
         "Turn on i-have-adhd.",
         "i-have-adhd: how do I get this project running?"
       ]
+    },
+    "czek-method": {
+      "badge": "method",
+      "summary": "How a senior engineer works + picks skills by itself",
+      "what": "Always on: understand, load skills, read code, small steps, verify, honest report. Loads the other skills (impeccable, ui-ux-pro-max, debugging…) by itself.",
+      "when": [],
+      "examples": []
+    },
+    "czek-debugging": {
+      "badge": "method",
+      "summary": "Systematic debugging: reproduce, root cause, test",
+      "what": "Bug, crash, wrong output: reproduce, read the full error, find the root cause, fix, prove with a test.",
+      "when": [],
+      "examples": []
+    },
+    "czek-testing": {
+      "badge": "method",
+      "summary": "Tests that really prove the feature",
+      "what": "Write and run tests with the project tools; edge cases; never weaken tests to pass.",
+      "when": [],
+      "examples": []
+    },
+    "czek-review": {
+      "badge": "method",
+      "summary": "Self-review before \"done\"",
+      "what": "Reviews its own diff: scope, edge cases, errors, style, leftovers, security, actually run.",
+      "when": [],
+      "examples": []
+    },
+    "czek-refactor": {
+      "badge": "method",
+      "summary": "Refactoring without changing behaviour",
+      "what": "Rename, split, deduplicate in small steps with tests after each.",
+      "when": [],
+      "examples": []
+    },
+    "czek-performance": {
+      "badge": "method",
+      "summary": "Speed-ups backed by measurements",
+      "what": "Measure, find the bottleneck, change one thing, measure again.",
+      "when": [],
+      "examples": []
+    },
+    "czek-security": {
+      "badge": "method",
+      "summary": "Security basics: secrets, passwords, input, SQL",
+      "what": "Secrets out of code, hashed passwords, validated input, parameterized SQL, safe uploads.",
+      "when": [],
+      "examples": []
+    },
+    "czek-git": {
+      "badge": "method",
+      "summary": "Safe git workflow for teams",
+      "what": "Small commits, clear messages, branches, conflicts, never secrets, no destructive commands.",
+      "when": [],
+      "examples": []
+    },
+    "czek-new-project": {
+      "badge": "method",
+      "summary": "Starting a new project the right way",
+      "what": "Simple proven stack, official scaffolding, running skeleton first, then features, README and .gitignore.",
+      "when": [],
+      "examples": []
+    },
+    "czek-research": {
+      "badge": "method",
+      "summary": "Research a library before using it",
+      "what": "Check installed version, types and official docs; never invent APIs.",
+      "when": [],
+      "examples": []
+    },
+    "czek-frontend": {
+      "badge": "method",
+      "summary": "Professional UI: design skills + browser check",
+      "what": "Combines impeccable, ui-ux-pro-max and unslop-ui with real browser checks: responsive, states, a11y, clean console.",
+      "when": [],
+      "examples": []
     }
   }
 }

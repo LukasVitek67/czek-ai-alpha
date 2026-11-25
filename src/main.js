@@ -787,7 +787,8 @@ function sysInfo() {
 // v menu „Všechny skills“ (settings.ocAllSkills) to vrátí. Viz opencode.applySkills.
 function leanSkills() {
   if (settings.ocAllSkills === true) return null;
-  const names = skills.bundled(SKILLS_BUNDLE()).filter((n) => !/^(caveman|cavecrew)/.test(n));
+  // czek-method je trvale v pokynech (instructions) → v seznamu skills by byl podruhé
+  const names = skills.bundled(SKILLS_BUNDLE()).filter((n) => !/^(caveman|cavecrew)/.test(n) && n !== 'czek-method');
   return names.length ? [...names, 'customize-opencode'] : null;
 }
 
@@ -810,6 +811,7 @@ async function syncOpencodeConfig(so = {}) {
         reviewer: settings.ocReviewer !== false, // kontroloví subagenti reviewer a reviewer-alt (výchozí zapnuto)
         caveman: settings.caveman !== false, // skill caveman trvale zapnutý (vypíná se v menu)
         cavemanSkill: path.join(SKILLS_BUNDLE(), 'caveman', 'SKILL.md'),
+        methodSkill: path.join(SKILLS_BUNDLE(), 'czek-method', 'SKILL.md'), // postup práce + směrovač skills, trvale
         sysInfo: settings.sysContext !== false ? sysInfo() : null,
         skillsAllow: leanSkills(),
       });
@@ -2560,6 +2562,13 @@ app.whenReady().then(async () => {
   await omniReady; // instalace OmniRoute (jen když chyběl); po ní OpenCode rovnou s OmniRoute
   await openMain();
   openWizardIfNeeded('');
+  // Průvodce otevřený během instalace OmniRoute by teď zůstal ZA nově otevřeným oknem OpenCode a student by ho
+  // neviděl (hlášení 25. 11.: „wizard se nespolehlivě otevírá“). Pořád bez klíče → průvodce dopředu.
+  if (wizardOpened && WIZARD.needsWizard(settings) && win && !win.isDestroyed() && !process.env.ZDARMA_HIDDEN) {
+    if (win.isMinimized()) win.restore();
+    win.show(); win.moveTop(); win.focus();
+    logLine('[průvodce] po otevření okna OpenCode přenesen dopředu');
+  }
   startPublicTier();
   // Staré rozbalené kopie přenosné verze v %TEMP% (0,7 GB každá) – jen u zabaleného exe, chvíli po startu.
   if (app.isPackaged && process.env.PORTABLE_EXECUTABLE_FILE) {
@@ -2572,7 +2581,16 @@ app.whenReady().then(async () => {
   }
   // Diagnostika: otevřít okna tak, jak to dělá menu okna OpenCode (jen se ZDARMA_DEBUG_OPEN).
   if (process.env.ZDARMA_DEBUG_OPEN) {
-    setTimeout(() => { logLine('[debug] open', process.env.ZDARMA_DEBUG_OPEN); if (/skills/.test(process.env.ZDARMA_DEBUG_OPEN)) openSkillsWindow(); if (/settings/.test(process.env.ZDARMA_DEBUG_OPEN)) openZdarma('settings'); }, 4000);
+    setTimeout(() => { logLine('[debug] open', process.env.ZDARMA_DEBUG_OPEN); if (/skills/.test(process.env.ZDARMA_DEBUG_OPEN)) openSkillsWindow(); if (/settings/.test(process.env.ZDARMA_DEBUG_OPEN)) openZdarma('settings');
+      // „wizardmenu“: klik na položku Průvodce klíči v menu okna OpenCode (přesně jako uživatel)
+      if (/wizardmenu/.test(process.env.ZDARMA_DEBUG_OPEN)) {
+        // 1. klik, 2. klik s otevřeným oknem (jiná stránka), 3. klik po zavření okna
+        const click = (n) => { const it = ocWin && !ocWin.isDestroyed() && opencodeMenu().items[0].submenu.items[0]; logLine(`[debug] menu průvodce ${n}`, it ? it.label : 'okno OpenCode není'); if (it) it.click(); };
+        click(1);
+        setTimeout(() => { send('nav', 'settings'); setTimeout(() => click(2), 1500); }, 6000);
+        setTimeout(() => { if (win && !win.isDestroyed()) win.close(); setTimeout(() => click(3), 2500); }, 14000);
+      }
+    }, Number(process.env.ZDARMA_DEBUG_OPEN_MS) || 4000);
   }
 });
 app.on('window-all-closed', () => {

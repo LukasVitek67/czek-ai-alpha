@@ -92,7 +92,7 @@ ps aux | grep -i furrybee`, `cd "${projSh}" && cp furry.js furry-copy.js`];
     assert.ok(/"kind":"timeout"/.test(log), 'build dostal delší limit nástroje bash (10 min místo 120 s)');
     console.log(`oc-launch OK (dev server na pozadí za ${d1.toFixed(1)} s místo 120 s, běží dál; před cp ukončen; FurryBee.exe s ps | grep za ${d4.toFixed(1)} s místo visení; celý dotaz ${(wall / 1000).toFixed(1)} s)`);
   } finally {
-    try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {}
+    if (process.platform === 'win32') { try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {} } else { try { child.kill('SIGKILL'); } catch {} }
     up.close();
     await wait(1500);
     try { fs.rmSync(base, { recursive: true, force: true }); } catch {}

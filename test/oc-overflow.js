@@ -67,7 +67,7 @@ const { findOpencode, serveEnv } = require('../src/opencodeServer');
     assert.ok(msgs.some((m) => m.parts.some((p) => p.type === 'text' && /Done after compaction/.test(p.text || ''))), 'OpenCode continued after compaction: ' + log.join(','));
     console.log(`oc-overflow OK („Prompt exceeds max length“ → zkrácení → pokračuje samo; dotazy: ${log.join(', ')})`);
   } finally {
-    try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {}
+    if (process.platform === 'win32') { try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {} } else { try { child.kill('SIGKILL'); } catch {} }
     up.close();
     setTimeout(() => { try { fs.rmSync(base, { recursive: true, force: true }); } catch {} }, 1500);
   }

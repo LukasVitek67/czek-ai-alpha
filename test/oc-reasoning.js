@@ -77,7 +77,7 @@ async function run(guard, pluginSrc, port) {
       reasoningEchoed: agents.length > 1 && agents[1].messages.some((m) => m.role === 'assistant' && m.reasoning_content === 'read first'),
     };
   } finally {
-    try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {}
+    if (process.platform === 'win32') { try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {} } else { try { child.kill('SIGKILL'); } catch {} }
     up.close();
     setTimeout(() => { try { fs.rmSync(base, { recursive: true, force: true }); } catch {} }, 1500);
   }

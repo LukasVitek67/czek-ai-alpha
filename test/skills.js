@@ -13,7 +13,7 @@ const { projectOf } = require('../src/proxy');
 const bundle = path.join(__dirname, '..', 'skills');
 const cat = skills.catalog(bundle);
 const names = skills.bundled(bundle);
-assert.equal(names.length, 36, names.join(',')); // 34 ze seznamu uživatele + app-debugging (Zdarma) + i-have-adhd (záložky 13. 11.)
+assert.equal(names.length, 47, names.join(',')); // 34 ze seznamu uživatele + app-debugging + i-have-adhd + 11 vlastních czek-* (postup práce, 25. 11.)
 assert.deepEqual(cat.skills.map((s) => s.name).sort(), names, 'katalog pokrývá všechny přibalené skills');
 for (const s of cat.skills) assert.ok(s.what && s.summary && s.group && cat.sources[s.source], `návod pro ${s.name}`);
 

@@ -96,7 +96,7 @@ const shots = process.env.UI_SHOTS || path.join(os.tmpdir(), 'zd-ui-shots');
     assert.ok(!/\{[a-z]+\}/.test(totals), 'no unfilled {placeholders}');
     console.log(`app-ui OK (přehrávač hraje bez zvuku → 🔊 zvuk → ▶ další video; úkoly skryté; součty v Kontextu; lišta nové verze) – snímky: ${shots}`);
   } finally {
-    try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {}
+    if (process.platform === 'win32') { try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {} } else { try { child.kill('SIGKILL'); } catch {} }
     setTimeout(() => { try { fs.rmSync(rep.base, { recursive: true, force: true }); fs.rmSync(desk, { recursive: true, force: true }); } catch {} }, 3000);
   }
 })().catch((e) => { console.error(e.message || e); process.exitCode = 1; });

@@ -89,7 +89,7 @@ const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAEklEQVR4nGP4z8CAFWE
     assert.ok(toolNames.includes('look'), 'agent má nástroj look: ' + toolNames.join(','));
     console.log(`oc-vision OK (obrázek přes OpenCode a plugin → soubor v projektu + popis od modelu s viděním; nástroj look k dispozici; nástroje: ${toolNames.join(', ')})`);
   } finally {
-    try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {}
+    if (process.platform === 'win32') { try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {} } else { try { child.kill('SIGKILL'); } catch {} }
     up.close(); proxy.close();
     setTimeout(() => { try { fs.rmSync(base, { recursive: true, force: true }); } catch {} }, 1500);
   }

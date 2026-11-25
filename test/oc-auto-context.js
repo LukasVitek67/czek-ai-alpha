@@ -89,7 +89,7 @@ async function run(patched, pluginSrc, port) {
     const compactedBeforeNextStep = compactAt > agentAt && (secondAgentAt < 0 || compactAt < secondAgentAt);
     return { ctx, compactedBeforeNextStep, log: log.join(' ') };
   } finally {
-    try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {}
+    if (process.platform === 'win32') { try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {} } else { try { child.kill('SIGKILL'); } catch {} }
     up.close();
     setTimeout(() => { try { fs.rmSync(base, { recursive: true, force: true }); } catch {} }, 1500);
   }

@@ -65,7 +65,7 @@ async function run(rep, label, maxS) {
       if (ok) { out.firstOk = s(); break; }
     }
   } finally {
-    try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {}
+    if (process.platform === 'win32') { try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {} } else { try { child.kill('SIGKILL'); } catch {} }
     await wait(4000);
   }
   return out;

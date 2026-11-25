@@ -105,7 +105,7 @@ async function run(race, pluginSrc, port, stallFirst = false) {
     const errors = msgs.filter((m) => m.info?.error).map((m) => m.info.error.name + ': ' + String(m.info.error.data?.message || '').slice(0, 120));
     return { ms, toolOk, final, reqs, stats: proxy.stats, asked, post: msgs.length, errors };
   } finally {
-    try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {}
+    if (process.platform === 'win32') { try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {} } else { try { child.kill('SIGKILL'); } catch {} }
     up.close(); proxy.close();
     setTimeout(() => { try { fs.rmSync(base, { recursive: true, force: true }); } catch {} }, 1500);
   }

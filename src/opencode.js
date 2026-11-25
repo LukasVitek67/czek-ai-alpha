@@ -379,6 +379,16 @@ const AGENT_TIPS_FILE = () => path.join(CONFIG_DIR(), 'zdarma-agent.md');
 // Skill caveman (JuliusBrussee/caveman, Apache-2.0, přibalený ve skills/caveman) trvale zapnutý: jeho pravidla jdou
 // do "instructions" → v každém dotazu, model ho nemusí načítat (uživatel 14. 11.: „always have turned on“).
 const CAVEMAN_FILE = () => path.join(CONFIG_DIR(), 'czek-caveman.md');
+// Pracovní postup czek-ai (skills/czek-method, vlastní skill): jak pracuje zkušený inženýr (porozumět → načíst skills →
+// číst kód → malé kroky → ověřit → poctivá zpráva) + směrovač, které skills má agent SÁM načíst podle úkolu (impeccable,
+// ui-ux-pro-max, czek-debugging…). Uživatel 25. 11.: „ať si model vždy sám skills automaticky bere bez nutnosti inputu“.
+// Trvale v "instructions" jako caveman (~3,4 kB v každém dotazu).
+const METHOD_FILE = () => path.join(CONFIG_DIR(), 'czek-method.md');
+/** Text pokynů ze SKILL.md skillu czek-method (bez hlavičky YAML). */
+function methodInstructions(skillFile) {
+  const body = fs.readFileSync(skillFile, 'utf8').replace(/\r\n/g, '\n').replace(/^---\n[\s\S]*?\n---\n/, '').trim();
+  return body + '\n';
+}
 /** Text pokynů ze SKILL.md skillu caveman: bez hlavičky a bez odstavce o aliasech na nepřibalené skills. */
 function cavemanInstructions(skillFile) {
   let body = fs.readFileSync(skillFile, 'utf8').replace(/\r\n/g, '\n');
@@ -668,6 +678,20 @@ function writeConfig(port, models, o = {}) {
     if (cur !== text) fs.writeFileSync(sysf, text);
     list.push(sysf);
   }
+  // pracovní postup + směrovač skills trvale zapnutý (o.method !== false a přibalený skill existuje)
+  const meth = METHOD_FILE();
+  const mi = list.indexOf(meth);
+  if (mi >= 0) list.splice(mi, 1);
+  if (o.method !== false && o.methodSkill && fs.existsSync(o.methodSkill)) {
+    const text = methodInstructions(o.methodSkill);
+    let cur = null;
+    try { cur = fs.readFileSync(meth, 'utf8'); } catch {}
+    fs.mkdirSync(CONFIG_DIR(), { recursive: true });
+    if (cur !== text) fs.writeFileSync(meth, text);
+    list.push(meth);
+  } else {
+    try { fs.rmSync(meth, { force: true }); } catch {}
+  }
   // caveman trvale zapnutý (o.caveman !== false a přibalený skill existuje)
   const cave = CAVEMAN_FILE();
   const li = list.indexOf(cave);
@@ -704,4 +728,4 @@ function isConfigured(port, omniUrl) {
   } catch { return false; }
 }
 
-module.exports = { AUTO_CONTEXT, COMBO_OUTPUT, DEFAULT_MODEL, SMALL_MODEL, writeConfig, isConfigured, installOmniPlugin, writeOmniAuth, clearOmniPluginCache, providerBlock, modelEntries, tierEntries, unitedEntries, leanVisible, provenModelKeys, CONFIG_FILE, AUTH_FILE, PLUGIN_DIR, FULL_AUTO, PERM_BACKUP, homeInGit, SNAP_MARK, AGENT_TIPS, AGENT_TIPS_FILE, GUARD_DIR, ROUTED_FILE, CAVEMAN_FILE, cavemanInstructions, SYSTEM_FILE, systemContext };
+module.exports = { AUTO_CONTEXT, COMBO_OUTPUT, DEFAULT_MODEL, SMALL_MODEL, writeConfig, isConfigured, installOmniPlugin, writeOmniAuth, clearOmniPluginCache, providerBlock, modelEntries, tierEntries, unitedEntries, leanVisible, provenModelKeys, CONFIG_FILE, AUTH_FILE, PLUGIN_DIR, FULL_AUTO, PERM_BACKUP, homeInGit, SNAP_MARK, AGENT_TIPS, AGENT_TIPS_FILE, GUARD_DIR, ROUTED_FILE, CAVEMAN_FILE, cavemanInstructions, METHOD_FILE, methodInstructions, SYSTEM_FILE, systemContext };

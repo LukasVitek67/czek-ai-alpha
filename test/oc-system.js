@@ -54,7 +54,7 @@ const { findOpencode, serveEnv } = require('../src/opencodeServer');
       await post(`/session/${s.id}/message`, { model: { providerID: 'zdarma', modelID: 'max' }, parts: [{ type: 'text', text: 'hi' }] });
       return systems.slice(before).at(-1) || '';
     } finally {
-      try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {}
+      if (process.platform === 'win32') { try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {} } else { try { child.kill('SIGKILL'); } catch {} }
       await new Promise((r) => setTimeout(r, 800));
     }
   };

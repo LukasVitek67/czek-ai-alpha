@@ -58,7 +58,7 @@ const { findOpencode, serveEnv } = require('../src/opencodeServer');
     assert.match(tool, /widened this command \(output was cut to 5 lines/, 'note');
     console.log(`oc-guard-widen OK (head -5 → model vidí všech ${(tool.match(/error E\d+/g) || []).length} chyb + poznámku)`);
   } finally {
-    try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {}
+    if (process.platform === 'win32') { try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {} } else { try { child.kill('SIGKILL'); } catch {} }
     up.close();
     setTimeout(() => { try { fs.rmSync(base, { recursive: true, force: true }); } catch {} }, 1500);
   }

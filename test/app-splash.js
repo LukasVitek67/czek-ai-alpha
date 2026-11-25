@@ -172,7 +172,7 @@ async function cdp(t, method, params = {}) {
     }
     console.log('snímky:', shots);
   } finally {
-    try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {}
+    if (process.platform === 'win32') { try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {} } else { try { child.kill('SIGKILL'); } catch {} }
     if (!process.env.SPLASH_SHOTS) setTimeout(() => { try { fs.rmSync(base, { recursive: true, force: true }); } catch {} }, 2000);
   }
 })().catch((e) => { console.error(e); process.exitCode = 1; });

@@ -52,7 +52,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     assert.match(text, /red/i, 'and knows the colour');
     console.log(`app-vision OK (obrázek → ${desc.model} → tier Max odpověděl „${text.trim().slice(0, 80)}“)`);
   } finally {
-    try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {}
+    if (process.platform === 'win32') { try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {} } else { try { child.kill('SIGKILL'); } catch {} }
     setTimeout(() => { try { fs.rmSync(rep.base, { recursive: true, force: true }); fs.rmSync(work, { recursive: true, force: true }); } catch {} }, 3000);
   }
 })().catch((e) => { console.error(e); process.exitCode = 1; });

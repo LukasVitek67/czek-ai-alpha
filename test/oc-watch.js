@@ -60,7 +60,7 @@ const ocWatch = require('../src/ocWatch');
     assert.ok(again.ok && !again.healed, 'healthy instance is left alone');
     console.log(`oc-watch OK (OmniRoute nedostupný → instance bez modelů; po zotavení zůstala prázdná; heal → ${r.models} modely; zdravou nechá být)`);
   } finally {
-    try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {}
+    if (process.platform === 'win32') { try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {} } else { try { child.kill('SIGKILL'); } catch {} }
     up.close();
     setTimeout(() => { try { fs.rmSync(base, { recursive: true, force: true }); } catch {} }, 1500);
   }

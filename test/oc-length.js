@@ -70,7 +70,7 @@ async function scenario(name, port, lengthReplies, waitMs, toolText = null) {
     console.log(`  [${name}] dotazy agenta: ${agentCount}, záznamy continue: ${conts.length}, continue-skip: ${skips.length}`);
     return { agentCount, agentReqs, conts, skips };
   } finally {
-    try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {}
+    if (process.platform === 'win32') { try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {} } else { try { child.kill('SIGKILL'); } catch {} }
     up.close();
     setTimeout(() => { try { fs.rmSync(base, { recursive: true, force: true }); } catch {} }, 1500);
   }

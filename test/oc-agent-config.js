@@ -75,7 +75,7 @@ const { findOpencode, serveEnv } = require('../src/opencodeServer');
     assert.ok(seen.every((j) => j.model === 'max'), 'compaction model: ' + seen.map((j) => j.model).join(','));
     console.log(`oc-agent-config OK (system prompt ${sys.length} znaků, skills blok ${sk.length})`);
   } finally {
-    try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {}
+    if (process.platform === 'win32') { try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {} } else { try { child.kill('SIGKILL'); } catch {} }
     up.close();
     setTimeout(() => { try { fs.rmSync(base, { recursive: true, force: true }); } catch {} }, 1500);
   }

@@ -52,7 +52,7 @@ const { findOpencode, serveEnv } = require('../src/opencodeServer');
     assert.strictEqual(served.agent.reviewer.mode, 'subagent');
     console.log('serve OK: /config obsahuje reviewer + reviewer-alt');
   } finally {
-    try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {}
+    if (process.platform === 'win32') { try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {} } else { try { child.kill('SIGKILL'); } catch {} }
   }
 
   // 3) reviewer vypnutý: oba pryč, compaction zůstává

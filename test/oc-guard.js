@@ -61,7 +61,7 @@ const { findOpencode, serveEnv } = require('../src/opencodeServer');
     assert.match(toolMsgs[4], /Blocked by czek-guard/, '5th identical call is blocked: ' + toolMsgs[4].slice(0, 200));
     console.log(`oc-guard OK (${toolMsgs.length} volání, poznámka u 3., blok u 5.)`);
   } finally {
-    try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {}
+    if (process.platform === 'win32') { try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {} } else { try { child.kill('SIGKILL'); } catch {} }
     up.close();
     setTimeout(() => { try { fs.rmSync(base, { recursive: true, force: true }); } catch {} }, 1500);
   }

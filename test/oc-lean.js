@@ -63,7 +63,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const proj = x('proj'); env.PWD = proj;
   const port = 4326;
   const start = () => spawn(findOpencode(), ['serve', '--port', String(port), '--hostname', '127.0.0.1'], { cwd: proj, env, windowsHide: true, stdio: 'ignore' });
-  const stop = async (c) => { try { execFileSync('taskkill', ['/pid', String(c.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {} await wait(1500); };
+  const stop = async (c) => { if (process.platform === 'win32') { try { execFileSync('taskkill', ['/pid', String(c.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {} } else { try { c.kill('SIGKILL'); } catch {} } await wait(1500); };
   const u = `http://127.0.0.1:${port}`; const q = '?directory=' + encodeURIComponent(proj);
   const upWait = async () => { for (let i = 0; i < 160; i++) { try { if ((await fetch(u + '/')).status) return; } catch {} await wait(250); } };
   const ask = async () => {

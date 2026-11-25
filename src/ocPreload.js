@@ -3,7 +3,12 @@
 //  - před načtením rozhraní nastaví rozvržení (klasické = chaty svisle vlevo) podle volby v menu Zdarmy,
 //  - do panelu Kontext přidá sekci „Limity“ s využitím API a modelů (data z proxy Zdarmy).
 const { contextBridge, ipcRenderer } = require('electron');
-const { activeCadence, limitsCadence } = require('./pollCadence');
+// Preload běží v sandboxu (sandbox: true): require funguje jen pro 'electron', ne pro vlastní soubory. Dřív tu bylo
+// načítání ./pollCadence → „module not found“ a celý preload od 0.15.28 nefungoval (výběr složky, rozvržení,
+// panel Limity, přehrávač). Kopie src/pollCadence.js; shodu hlídá test/poll-cadence.js.
+const ACTIVE_MS = 1000, IDLE_MS = 2500, HIDDEN_MS = 5000, LIMITS_MS = 8000;
+const activeCadence = (hidden, running) => (hidden ? { poll: false, delay: HIDDEN_MS } : { poll: true, delay: running ? ACTIVE_MS : IDLE_MS });
+const limitsCadence = (hidden) => ({ poll: !hidden, delay: LIMITS_MS });
 
 let PREFS = {};
 function applyPopupSize(w, h) {

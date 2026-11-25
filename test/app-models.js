@@ -133,7 +133,7 @@ function startProxy(getTarget) {
       console.log(`app-models OK (modely ve výběru od ${firstOk} s${lastEmpty ? `, prázdný naposledy v ${lastEmpty} s` : ', ani jednou prázdný'})`);
     }
   } finally {
-    try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {}
+    if (process.platform === 'win32') { try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {} } else { try { child.kill('SIGKILL'); } catch {} }
     if (proxy) proxy.srv.close();
     setTimeout(() => { try { fs.rmSync(rep.base, { recursive: true, force: true }); } catch {} }, 3000);
   }

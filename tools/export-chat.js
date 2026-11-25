@@ -31,6 +31,11 @@ const mask = (s) => maskSecrets(s)
   .replace(/github_pat_[A-Za-z0-9_]{16,}/g, 'github_pat_***')
   .replace(/AIza[0-9A-Za-z_-]{30,}/g, 'AIza***')
   .replace(/sk-(ant-|proj-)?[A-Za-z0-9_-]{20,}/g, 'sk-***')
+  // lokální klíč Strata (STRATA_LOCAL_KEY_0 / api_key nativní instance): 64 hex; 25. 11. unikl do exportu i archivu smyčky
+  .replace(/((?:STRATA_LOCAL_KEY_\d+|api_key)["']?\s*[=:]\s*["']?)[0-9a-f]{32,}/gi, '$1<strata-local-key>')
+  .replace(/\blukas\.vitek\.(lbc|025)\b/g, '<e-mail>')
+  // klíč Strata i bez názvu proměnné (např. v příkazu K=…): každý 64znakový hex (přijdeme jen o sha256 v chatu)
+  .replace(/[0-9a-f]{44,}/g, '<hex>')
   .replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, (m) => (/noreply@anthropic\.com$/.test(m) ? m : '<e-mail>'));
 
 const lines = fs.readFileSync(src, 'utf8').split(/\r?\n/).filter(Boolean);

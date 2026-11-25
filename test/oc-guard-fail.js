@@ -84,7 +84,7 @@ const { findOpencode, serveEnv } = require('../src/opencodeServer');
     assert.strictEqual(stored.length, 2, 'todos stored for the GUI: ' + JSON.stringify(stored));
     console.log(`oc-guard-fail OK (${tool.length} volání: 3 chyby editu → blok 4.; todowrite krátce, 4. blok; seznam uložen)`);
   } finally {
-    try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {}
+    if (process.platform === 'win32') { try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {} } else { try { child.kill('SIGKILL'); } catch {} }
     up.close();
     setTimeout(() => { try { fs.rmSync(base, { recursive: true, force: true }); } catch {} }, 1500);
   }

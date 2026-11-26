@@ -63,4 +63,14 @@ const repo = E.load();
 assert.ok(Object.keys(repo).length >= 5, 'src/model-evidence.json loaded');
 assert.ok(E.matcher(repo, now).test('nvidia/nemotron-3-ultra-550b-a55b'), 'Nemotron proven by measurements');
 assert.ok(!E.matcher(repo, now).test('gemini-3.8-flash'), 'unmeasured model is not proven (the old regex let it in)');
+// úspěch za 780 s (GLM 5.3 Flash, týdenní přeměření 25. 11.) není ověření; rychlý úspěch ano
+{
+  const at = new Date(now - 86400000).toISOString();
+  const m = { slow: [{ ok: true, wallS: 780, fixture: 'bugfix', at }], fast: [{ ok: true, wallS: 25, fixture: 'bugfix', at }],
+    mixed: [{ ok: true, wallS: 780, fixture: 'bugfix', at }, { ok: true, wallS: 90, fixture: 'feature', at }] };
+  const p = E.proven(m, now);
+  assert.ok(!p.slow && p.fast, 'a 780 s success does not prove a model');
+  assert.ok(p.mixed && p.mixed.fixtures === 1 && p.mixed.rate === 0.5, 'slow success counts as a failed run');
+}
+assert.ok(!E.matcher(repo, now).test('nvidia/z-ai/glm-5.3-flash'), 'GLM 5.3 Flash (780 s) not proven');
 console.log(`evidence OK (${Object.keys(E.proven(repo)).length} ověřených modelů v src/model-evidence.json)`);

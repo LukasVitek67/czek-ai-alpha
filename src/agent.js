@@ -15,8 +15,17 @@ const IS_WIN = process.platform === 'win32';
 // ---------------------------------------------------------------- modely
 
 class ModelRegistry {
-  constructor(getSettings) {
+  /**
+   * @param {object} [opts]
+   * @param {string} [opts.cacheFile] seznamy modelů od poskytovatelů z minula (JSON): s ním list() čeká na poskytovatele
+   *   nejvýš opts.waitMs (2,5 s); kdo do té doby neodpoví, dostane seznam z minula a čerstvý se doplní na pozadí.
+   *   25. 11.: start čekal na nejpomalejšího poskytovatele (registry.list 0,9–6,3 s, strop 12 s).
+   */
+  constructor(getSettings, opts = {}) {
     this.getSettings = getSettings;
+    this.cacheFile = opts.cacheFile || null;
+    this.waitMs = Number(process.env.ZDARMA_LIST_WAIT_MS ?? opts.waitMs ?? 2500);
+    this.lastLists = null; // {providerId: {at, list}} z disku, načte se při prvním list()
     this.cache = null;
     this.cacheAt = 0;
     this.cooldown = new Map(); // key -> {until, reason}
@@ -39,15 +48,35 @@ class ModelRegistry {
 
   invalidate() { this.cache = null; }
 
+  /** Seznam modelů poskytovatele do paměti (a na disk při saveLists). Lokální poskytovatelé (LM Studio…) se neukládají. */
+  remember(id, list, deferSave = false) {
+    if (!this.cacheFile || !Array.isArray(list) || !list.length) return;
+    if (!this.lastLists) this.lastLists = {};
+    this.lastLists[id] = { at: Date.now(), list: list.map(({ raw, ...m }) => m) };
+    if (!deferSave) this.saveLists();
+  }
+
+  saveLists() {
+    if (!this.cacheFile || !this.lastLists) return;
+    try {
+      const fs = require('fs');
+      const tmp = this.cacheFile + '.tmp';
+      fs.writeFileSync(tmp, JSON.stringify({ v: 1, providers: this.lastLists }));
+      fs.renameSync(tmp, this.cacheFile);
+    } catch {}
+  }
+
   async list(force = false) {
     if (!force && this.cache && Date.now() - this.cacheAt < 10 * 60 * 1000) return this.cache;
     const models = [];
     const status = {};
+    if (this.cacheFile && !this.lastLists) {
+      try { this.lastLists = JSON.parse(require('fs').readFileSync(this.cacheFile, 'utf8')).providers || {}; } catch { this.lastLists = {}; }
+    }
     await Promise.all(this.providers().map(async ({ p, key, enabled }) => {
       if (!enabled) { status[p.id] = { state: 'off' }; return; }
-      try {
-        const list = await p.listModels(key);
-        const usable = !p.needsKey || !!key;
+      const usable = !p.needsKey || !!key;
+      const push = (list) => {
         for (const m of list) {
           models.push({
             key: `${p.id}/${m.id}`, provider: p.id, providerName: p.name, id: m.id, name: m.name || m.id,
@@ -55,12 +84,39 @@ class ModelRegistry {
             uncAuto: isUncensored(m), ...(m.maxLen ? { maxLen: m.maxLen, workers: m.workers, eta: m.eta } : {}),
           });
         }
+      };
+      const fresh = Promise.resolve().then(() => p.listModels(key));
+      const last = !force && !p.local && this.lastLists?.[p.id]?.list;
+      if (last && this.waitMs > 0) {
+        const timer = new Promise((r) => setTimeout(() => r(null), this.waitMs).unref?.());
+        const got = await Promise.race([fresh.then((l) => ({ l }), (e) => ({ e })), timer]);
+        if (!got) { // pomalý: seznam z minula, čerstvý doplnit na pozadí (chyba ne – neplatný klíč se nesmí schovat)
+          push(last);
+          status[p.id] = { state: usable ? 'ok' : 'nokey', count: last.length, cached: true };
+          fresh.then((l) => { this.remember(p.id, l); this.invalidate(); }, () => {});
+          return;
+        }
+        if (got.e) {
+          if (p.needsKey && !key) status[p.id] = { state: 'nokey' };
+          else status[p.id] = { state: 'error', error: got.e.message };
+          return;
+        }
+        push(got.l);
+        this.remember(p.id, got.l, true);
+        status[p.id] = { state: usable ? 'ok' : 'nokey', count: got.l.length };
+        return;
+      }
+      try {
+        const list = await fresh;
+        push(list);
+        this.remember(p.id, list, true);
         status[p.id] = { state: usable ? 'ok' : 'nokey', count: list.length };
       } catch (e) {
         if (p.needsKey && !key) status[p.id] = { state: 'nokey' }; // seznam bez klíče nejde, není to chyba
         else status[p.id] = { state: p.local ? 'offline' : 'error', error: p.local ? 'neběží' : e.message };
       }
     }));
+    this.saveLists();
     this.cache = { models, status, at: Date.now() };
     this.cacheAt = Date.now();
     return this.cache;

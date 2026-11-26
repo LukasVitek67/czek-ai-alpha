@@ -25,6 +25,23 @@ const ocTarball = (pkg, ver) => `${REGISTRY()}/${pkg}/-/${pkg}-${ver}.tgz`;
 // součtem jako stažené (nesedí → stáhne se normálně), npm instaluje z kopie cache (--prefer-offline).
 let CLASS = null;
 const sha256hex = (b) => crypto.createHash('sha256').update(b).digest('hex');
+
+/**
+ * Přejmenování s opakováním při EPERM/EACCES/EBUSY (Windows: antivirus/Defender zrovna kontroluje čerstvě rozbalené
+ * soubory a drží je otevřené). Čistý Windows 11 ve VM 26. 11.: „Git selhal EPERM: operation not permitted, rename
+ * 'git.part' -> 'git'“ → agent bez Git Bashe. Stejně jako npm (graceful-fs) zkouší až ~60 s s rostoucí pauzou.
+ */
+async function renameRetry(from, to, { maxMs = Number(process.env.ZDARMA_RENAME_RETRY_MS) || 60000, onRetry } = {}) {
+  const t0 = Date.now();
+  for (let i = 0, wait = 100; ; i++) {
+    try { fs.renameSync(from, to); return i; } catch (e) {
+      if (!/^(EPERM|EACCES|EBUSY)$/.test(e.code) || Date.now() - t0 + wait > maxMs) throw e;
+      onRetry?.(e, i + 1);
+      await new Promise((r) => setTimeout(r, wait));
+      wait = Math.min(wait * 1.5, 2000);
+    }
+  }
+}
 const sha512b64 = (b) => crypto.createHash('sha512').update(b).digest('base64');
 /** První složka z kandidátů, ve které je manifest.json od --priprav-tridu, jinak null. */
 function findClassCache(cands) {
@@ -147,7 +164,7 @@ async function installOpencode(o) {
       const v = binVersion(part);
       if (!v) { try { fs.unlinkSync(part); } catch {} throw new Error(`${pkg} se na tomto počítači nespustil`); }
       try { fs.unlinkSync(target); } catch {}
-      fs.renameSync(part, target);
+      await renameRetry(part, target);
       fs.writeFileSync(path.join(o.dir, 'installed.json'), JSON.stringify({ pkg, version: v, at: new Date().toISOString() }, null, 2));
       progress({ phase: 'done', pkg });
       return target;
@@ -230,7 +247,7 @@ async function installNode(o) {
   const v = spawnSync(nodeExe, ['--version'], { encoding: 'utf8', windowsHide: true, timeout: 30000 }).stdout?.trim();
   if (v !== 'v' + NODE.version) throw new Error('přenosný Node.js se nespustil');
   rmrf(o.dir);
-  fs.renameSync(inner, o.dir);
+  await renameRetry(inner, o.dir);
   rmrf(part);
   return path.join(o.dir, 'node.exe');
 }
@@ -251,7 +268,7 @@ async function installNodeLinux(o, progress) {
   const v = spawnSync(path.join(inner, 'bin', 'node'), ['--version'], { encoding: 'utf8', timeout: 30000 }).stdout?.trim();
   if (v !== 'v' + NODE.version) throw new Error('přenosný Node.js se nespustil');
   rmrf(o.dir);
-  fs.renameSync(inner, o.dir);
+  await renameRetry(inner, o.dir);
   rmrf(part);
   return path.join(o.dir, 'bin', 'node');
 }
@@ -280,7 +297,7 @@ async function installGit(o) {
   const ok = spawnSync(bash, ['-lc', 'echo ok'], { encoding: 'utf8', windowsHide: true, timeout: 60000 }).stdout?.trim();
   if (!/ok$/.test(ok || '')) throw new Error('Git Bash se nespustil');
   rmrf(o.dir);
-  fs.renameSync(part, o.dir);
+  await renameRetry(part, o.dir);
   return path.join(o.dir, 'bin', 'bash.exe');
 }
 
@@ -375,7 +392,7 @@ async function installOmniroute(o) {
   if (code !== 0 || !fs.existsSync(bin)) { rmrf(part); throw new Error(`npm install omniroute skončil chybou (kód ${code})`); }
   if (!full) for (const p of SLIM_PRUNE) rmrf(path.join(part, ...p.split('/')));
   rmrf(o.dir);
-  fs.renameSync(part, o.dir);
+  await renameRetry(part, o.dir);
   return path.join(o.dir, 'node_modules', 'omniroute');
 }
 
@@ -420,7 +437,7 @@ async function prepareClassCache(o) {
       }
     }
     fs.writeFileSync(f + '.part', buf);
-    fs.renameSync(f + '.part', f);
+    await renameRetry(f + '.part', f);
   };
   await save('Node.js', NODE.url(), (b) => sha256hex(b) === NODE.sha256);
   await save('Git', GIT.url(), (b) => sha256hex(b) === GIT.sha256);
@@ -455,7 +472,7 @@ async function prepareClassCache(o) {
     });
     if (code === 0) {
       rmrf(tarFile);
-      fs.renameSync(tarFile + '.part', tarFile);
+      await renameRetry(tarFile + '.part', tarFile);
       tarOk = true;
       rmrf(path.join(o.dir, 'npm')); // s archivem cache npm netřeba (1,2 GB); bez něj zůstane jako záloha
       o.onLine?.(`[třída] archiv OmniRoute za ${Math.round((Date.now() - t0) / 1000)} s`);
@@ -496,10 +513,10 @@ async function extractOmniTar(tarFile, o) {
   const inner = path.join(part, 'omniroute');
   if (code !== 0 || !fs.existsSync(path.join(inner, 'node_modules', 'omniroute', 'bin', 'omniroute.mjs'))) { rmrf(part); throw new Error(`tar skončil kódem ${code}`); }
   rmrf(o.dir);
-  fs.renameSync(inner, o.dir);
+  await renameRetry(inner, o.dir);
   rmrf(part);
   o.onLine?.(`[třída] OmniRoute rozbalen z archivu ve složce pro třídu za ${Math.round((Date.now() - t0) / 1000)} s`);
   return path.join(o.dir, 'node_modules', 'omniroute');
 }
 
-module.exports = { classTar, cpSyncBroken, prepareClassCache, findClassCache, setClassCache, OC_INTEGRITY, installOpencode, installNode, installGit, installOmniroute, untarFile, supportsAvx2, binVersion, OC_VERSION, NODE, GIT, OMNI_VERSION, OMNI_META, OMNI_PKGS, OMNI_BYTES, OMNI_SCRIPTS };
+module.exports = { renameRetry, classTar, cpSyncBroken, prepareClassCache, findClassCache, setClassCache, OC_INTEGRITY, installOpencode, installNode, installGit, installOmniroute, untarFile, supportsAvx2, binVersion, OC_VERSION, NODE, GIT, OMNI_VERSION, OMNI_META, OMNI_PKGS, OMNI_BYTES, OMNI_SCRIPTS };

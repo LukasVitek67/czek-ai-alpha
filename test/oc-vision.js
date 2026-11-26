@@ -86,7 +86,9 @@ const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAEklEQVR4nGP4z8CAFWE
     assert.ok(file.toLowerCase().startsWith(dirImg.toLowerCase()) && fs.existsSync(file), 'obrázek uložen v projektu a cesta pro model vede tam: ' + file);
     assert.strictEqual(visionCalls, 1);
     const toolNames = agentReqs[0].tools.map((t) => t.function.name);
-    assert.ok(toolNames.includes('look'), 'agent má nástroj look: ' + toolNames.join(','));
+    // look (snímek okna přes PrintWindow) je jen pro Windows (src/guard/index.mjs)
+    if (process.platform === 'win32') assert.ok(toolNames.includes('look'), 'agent má nástroj look: ' + toolNames.join(','));
+    else assert.ok(!toolNames.includes('look'), 'look jen na Windows');
     console.log(`oc-vision OK (obrázek přes OpenCode a plugin → soubor v projektu + popis od modelu s viděním; nástroj look k dispozici; nástroje: ${toolNames.join(', ')})`);
   } finally {
     if (process.platform === 'win32') { try { execFileSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch {} } else { try { child.kill('SIGKILL'); } catch {} }

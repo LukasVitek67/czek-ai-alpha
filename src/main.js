@@ -578,7 +578,8 @@ function saveSession(s) {
 // ---------------------------------------------------------------- okno
 
 let win;
-const registry = new ModelRegistry(() => settings);
+// seznamy modelů od poskytovatelů z minula: start nečeká na nejpomalejšího (nejvýš 2,5 s, pak seznam z minula)
+const registry = new ModelRegistry(() => settings, { cacheFile: path.join(DATA(), 'provider-models.json') });
 const agent = new Agent(registry, () => settings);
 const running = new Map(); // sessionId -> AbortController
 const pendingPerm = new Map(); // reqId -> resolve

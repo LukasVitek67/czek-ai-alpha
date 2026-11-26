@@ -43,6 +43,17 @@ function fakeOmni(store) {
     if (method === 'GET' && p === '/api/combos') return { combos: st.store.slice() }; // kopie jako ze skutečného API (mazání za běhu nepřeskočí prvky)
     if (method === 'GET' && p.startsWith('/api/usage/call-logs')) return st.rows || [];
     if (method === 'GET' && p.startsWith('/api/provider-models')) return { models: [] };
+    if (method === 'POST' && p === '/api/combos/import') { // hromadný import nových combo (mode merge)
+      st.comboWrites.push(`${method} ${p}`);
+      st.imports = (st.imports || 0) + 1;
+      if (st.failImport) throw new Error('500 import nejde');
+      const created = [], skipped = [];
+      for (const b of body.combos) {
+        if (st.store.some((c) => c.name === b.name)) { skipped.push(b.name); continue; }
+        st.store.push(toStored(b, 'combo-' + (st.store.length + 1))); st.imported = (st.imported || 0) + 1; created.push(b.name);
+      }
+      return { mode: body.mode, created, skipped, removed: 0, warnings: [] };
+    }
     if (method === 'POST' || method === 'PUT') {
       if (p.startsWith('/api/combos')) {
         st.inflight++; st.maxInflight = Math.max(st.maxInflight, st.inflight);
@@ -80,15 +91,25 @@ function engine(st, dataDir = 'x') {
 }
 
 (async () => {
-  // 1) prázdné OmniRoute: vše se zapíše, souběžně nejvýše 6
+  // 1) prázdné OmniRoute: všechna nová combo jedním importem (dřív 160× POST po jednom: 13 s na skutečném OmniRoute)
   const store = [];
   const first = fakeOmni(store);
   const e1 = engine(first);
   await e1.sync({ registry, models, settings });
-  const created = first.posts;
-  assert.ok(created >= 10, `prvních zápisů má být víc (dostal jsem ${created})`);
-  assert.ok(first.maxInflight >= 2 && first.maxInflight <= 6, `souběžnost zápisů 2–6 (je ${first.maxInflight})`);
+  assert.equal(first.imports, 1, 'jeden hromadný import');
+  assert.ok(first.imported >= 10, `importem založeno víc combo (dostal jsem ${first.imported})`);
+  assert.equal(first.posts, 0, 'žádný POST po jednom');
   assert.equal(first.puts, 0);
+  for (const name of e1.baseLists.keys()) assert.ok(e1.applied.get(name)?.startsWith('{'), 'importované combo je v paměti zapsaných: ' + name);
+
+  // 1b) import selže → postaru po jednom, souběžně 2–6, výsledek stejný
+  const storeB = [];
+  const firstB = fakeOmni(storeB);
+  firstB.failImport = true;
+  await engine(firstB).sync({ registry, models, settings });
+  assert.equal(firstB.posts, first.imported, 'po selhání importu stejný počet combo po jednom');
+  assert.ok(firstB.maxInflight >= 2 && firstB.maxInflight <= 6, `souběžnost zápisů 2–6 (je ${firstB.maxInflight})`);
+  assert.deepEqual(storeB.map((c) => c.name).sort(), store.map((c) => c.name).sort(), 'import i záloha založí stejná combo');
 
   // 2) nová instance (paměť prázdná), OmniRoute má stejná combo → 0 zápisů combo
   const second = fakeOmni(store);
@@ -200,5 +221,5 @@ function engine(st, dataDir = 'x') {
   assert.ok(!groqOnly.some((c) => eDead.combos.has(c.name)), 'nejsou ani v seznamu combo appky');
   assert.ok(deadStore.some((c) => c.description === 'zdarma-tier'), 'tierlisty zůstávají');
 
-  console.log(`omni-sync-skip OK (prvních ${created} zápisů, souběžně max ${first.maxInflight}; druhý start 0 zápisů; rebalance 0; změněné combo 1)`);
+  console.log(`omni-sync-skip OK (1. start ${first.imported} combo jedním importem, záloha po jednom souběžně max ${firstB.maxInflight}; druhý start 0 zápisů; rebalance 0; změněné combo 1)`);
 })().catch((e) => { console.error(e); process.exit(1); });

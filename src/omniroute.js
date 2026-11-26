@@ -195,6 +195,7 @@ const PAUSE_LOG_MS = 10 * 60 * 1000; // do logu jen pauzy delší než tohle (kr
 // část 429 se do /api/resilience/model-cooldowns nedostane, takže syncCooldowns() pauzu nevidí a mrtvý model se
 // vrátí do čela combo i do závodu. lokalní pauza = kratší než OmniRoute reprobe (REPROBE_MS), aby se model
 // zkusil znovu. ZDARMA_PROBE_PAUSE=0 pauzy vypne (pro A/B měření).
+const PROBE_MAX_TOKENS = Number(process.env.ZDARMA_PROBE_MAX_TOKENS) || 16; // strop výstupu kontroly zdraví (probeOnce)
 const PROBE_PAUSE_MS = { 0: 5 * 60 * 1000, 429: 20 * 60 * 1000, 401: REPROBE_MS, 402: REPROBE_MS, 404: REPROBE_MS, 502: 5 * 60 * 1000, 503: 5 * 60 * 1000, 504: 5 * 60 * 1000 };
 // Timeout u fast probe (10 s) nemusí mean „dead“: pomalý model (12–18 s) jen nedokázal odpovědět v stropu.
 // Druhá round (slowPass, 25 s) rozhodne: odpověděl → jen odsunut na konec combo, ne pauza.
@@ -557,6 +558,7 @@ class OmniRoute {
     this.comboMeta.clear();
     const wanted = new Set();
     const writes = []; // zápisy combo, až po všech výpočtech (běží souběžně, viz runPool)
+    const fresh = []; // nová combo {name, body, sig}: jedním POST /api/combos/import (importCombos)
     // Stejné combo už v OmniRoute je (po restartu Zdarmy je paměť prázdná, combo z minula zůstává):
     // porovná se, co se zapisuje (modely v pořadí, strategie, názvy, limity, config), ne jen otisk.
     // Vrací null, když je combo stejné, jinak krátký důvod rozdílu (jde do logu synchronizace).
@@ -595,19 +597,20 @@ class OmniRoute {
       const why = ex ? diffInOmni(ex, list, meta) : 'nové';
       if (ex && (this.applied.get(name) === sig || !why)) { this.applied.set(name, sig); return; }
       reasons.push(`${name}: ${why}`);
+      const body = {
+        name,
+        ...(meta.displayName ? { displayName: meta.displayName } : {}),
+        ...(meta.description ? { description: meta.description } : {}),
+        ...(meta.context_length ? { context_length: meta.context_length } : {}),
+        strategy: meta.strategy,
+        enabled: true,
+        models: list,
+        config: meta.config,
+      };
+      // nová combo jedním importem (níž), změněná po jednom přes PUT
+      if (!ex) { fresh.push({ name, body, sig }); return; }
       writes.push(async () => {
-        const body = {
-          name,
-          ...(meta.displayName ? { displayName: meta.displayName } : {}),
-          ...(meta.description ? { description: meta.description } : {}),
-          ...(meta.context_length ? { context_length: meta.context_length } : {}),
-          strategy: meta.strategy,
-          enabled: true,
-          models: list,
-          config: meta.config,
-        };
-        if (ex) await this.api('PUT', `/api/combos/${encodeURIComponent(ex.id)}`, body);
-        else await this.api('POST', '/api/combos', body);
+        await this.api('PUT', `/api/combos/${encodeURIComponent(ex.id)}`, body);
         this.applied.set(name, sig);
       });
     };
@@ -698,6 +701,7 @@ class OmniRoute {
       this.log(`OmniRoute: sjednocené modely bez živého poskytovatele skryté (${hiddenDead.length}): ${hiddenDead.slice(0, 12).join(', ')}`);
     }
     for (const p of pending) placeCombo(...p);
+    await this.importCombos(fresh, writes);
     await runPool(writes, SYNC_POOL);
     const out = [...(this.deadProviders || []), ...(this.deadModels || [])];
     if (out.length || this.slow.size || this.flaky?.size) this.log(`OmniRoute: při synchronizaci mimo combo (mrtvé): ${out.join(', ') || 'žádné'}; nespolehlivé: ${[...(this.flaky || [])].join(', ') || 'žádné'}; na konci (pomalé): ${[...this.slow].join(', ') || 'žádné'}; zapsáno combo: ${writes.length}`);
@@ -1254,7 +1258,32 @@ class OmniRoute {
   }
 
   /** Jeden probe dotaz: { status, ms } – status 0 = žádná odpověď do stropu (timeout/abort). */
-  async probeOnce(ref, key, ms, { maxTokens = 1, content = 'Reply with OK.' } = {}) {
+  /**
+   * Nová combo jedním požadavkem POST /api/combos/import (mode merge) místo POST /api/combos po jednom.
+   * OmniRoute zápisy combo řadí za sebe: 160 combo po jednom 13,0 s, importem 0,17 s, uložená pole stejná 160/160
+   * (docs/research/2026-11-25-startup/import-check.js). Co import nezaloží (chyba, přeskočené jméno), jde postaru
+   * do `writes` jako POST po jednom. ZDARMA_COMBO_IMPORT=0 = vždy po jednom.
+   */
+  async importCombos(fresh, writes) {
+    if (!fresh.length) return;
+    const one = (f) => async () => { await this.api('POST', '/api/combos', f.body); this.applied.set(f.name, f.sig); };
+    if (fresh.length < 2 || process.env.ZDARMA_COMBO_IMPORT === '0') { for (const f of fresh) writes.push(one(f)); return; }
+    let created = new Set();
+    try {
+      const r = await this.api('POST', '/api/combos/import', { combos: fresh.map((f) => f.body), mode: 'merge' });
+      created = new Set(r?.created || []);
+    } catch (e) { this.log(`OmniRoute: hromadný import combo selhal (${String(e.message).slice(0, 160)}), zapisuji po jednom`); }
+    for (const f of fresh) {
+      if (created.has(f.name)) this.applied.set(f.name, f.sig);
+      else writes.push(one(f));
+    }
+    if (created.size) this.log(`OmniRoute: nová combo importem ${created.size}/${fresh.length}`);
+  }
+
+  // maxTokens 16, ne 1 (25. 11., docs/research/2026-11-25-probe-concurrency): OpenRouter přes OmniRoute na max_tokens 1
+  // neodpoví vůbec (30 s ticho u ERNIE, Nemotron Ultra, particle-1, Gemma 4 – i když má vrátit 429), od 8 výš vrátí
+  // skutečný stav za 3–4 s (200, nebo 429 vyčerpaného limitu). S 1 kontrola brala nejlepší modely za visící.
+  async probeOnce(ref, key, ms, { maxTokens = PROBE_MAX_TOKENS, content = 'Reply with OK.' } = {}) {
     const t = Date.now();
     try {
       const r = await fetch(`${this.url}/v1/chat/completions`, {

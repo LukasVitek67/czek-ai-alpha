@@ -24,10 +24,15 @@ const old = new Date(now - 3600e3);
 for (const n of ['nsa1111.tmp', 'nsb2222.tmp', 'nsc3333.tmp', 'other.tmp']) fs.utimesSync(path.join(tmp, n), old, old);
 
 // kopie, ze které běží jiná Zdarma (spuštěné exe = zamčené) → zůstane
-const busy = mk('nsf6666.tmp');
-fs.copyFileSync('C:/Windows/System32/PING.EXE', path.join(busy, 'app', 'Zdarma.exe'));
-fs.utimesSync(busy, old, old);
-const child = require('child_process').spawn(path.join(busy, 'app', 'Zdarma.exe'), ['-n', '30', '127.0.0.1'], { stdio: 'ignore', windowsHide: true });
+// (zamčené běžící exe jde nasimulovat jen na Windows; přenosná verze a úklid %TEMP% jsou jen pro Windows)
+const WIN = process.platform === 'win32';
+let child = null;
+if (WIN) {
+  const busy = mk('nsf6666.tmp');
+  fs.copyFileSync('C:/Windows/System32/PING.EXE', path.join(busy, 'app', 'Zdarma.exe'));
+  fs.utimesSync(busy, old, old);
+  child = require('child_process').spawn(path.join(busy, 'app', 'Zdarma.exe'), ['-n', '30', '127.0.0.1'], { stdio: 'ignore', windowsHide: true });
+}
 
 setTimeout(() => {
   try {
@@ -35,9 +40,9 @@ setTimeout(() => {
     assert.deepStrictEqual(r.removed, ['nsa1111.tmp']);
     assert.ok(r.bytes >= 1000);
     const left = fs.readdirSync(tmp).sort();
-    assert.deepStrictEqual(left, ['nsb2222.tmp', 'nsc3333.tmp', 'nsd4444.tmp', 'nsf6666.tmp', 'other.tmp']);
+    assert.deepStrictEqual(left, ['nsb2222.tmp', 'nsc3333.tmp', 'nsd4444.tmp', ...(WIN ? ['nsf6666.tmp'] : []), 'other.tmp']);
     console.log('cleanup OK');
   } catch (e) { console.error(e); process.exitCode = 1; }
-  child.kill();
+  if (child) child.kill();
   setTimeout(() => fs.rmSync(tmp, { recursive: true, force: true }), 1000);
 }, 1500);

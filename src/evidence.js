@@ -14,6 +14,10 @@ const MAX_AGE_DAYS = 45;
 const QUOTA = /\b429\b|cooling down|rate.?limit|quota|too many requests|insufficient (credit|balance|quota)|credits? (exhausted|required)|exhausted|sign up for free/i;
 const MIN_RATE = 0.5;
 const BROAD = 3;
+// Úspěch pomalejší než SLOW_S se do ověření nepočítá (běh zůstává, jen jako neúspěšný). Týdenní přeměření 25. 11.:
+// GLM 5.3 Flash zvládl bugfix za 780 s (ERNIE 25 s) a jen díky úspěchu by se stal ověřeným modelem na 2. místě
+// tieru Max → každý krok by čekal na 13minutový model. Nejdelší dobré běhy (repo, dlouhá relace) mají ~100–320 s.
+const SLOW_S = 600;
 
 /** Klíč modelu: poslední část id bez cesty poskytovatele a bez přípony :free (stejný model u Kilo, OpenRouteru…). */
 function modelKey(id) {
@@ -68,12 +72,12 @@ const median = (a) => { const s = [...a].sort((x, y) => x - y); return s.length 
  * Šíře důkazů má přednost před rychlostí: model rychlý na jedné úloze nepředběhne model ověřený na třech, ale model
  * ověřený na 3 úlohách a rychlejší předběhne pomalejší ověřený na 4.
  */
-function proven(models, now = Date.now(), { maxAgeDays = MAX_AGE_DAYS, minRate = MIN_RATE } = {}) {
+function proven(models, now = Date.now(), { maxAgeDays = MAX_AGE_DAYS, minRate = MIN_RATE, slowS = SLOW_S } = {}) {
   const since = now - maxAgeDays * 86400000;
   const out = [];
   for (const [key, runs] of Object.entries(models || {})) {
     const fresh = runs.filter((r) => Date.parse(r.at) >= since);
-    const ok = fresh.filter((r) => r.ok);
+    const ok = fresh.filter((r) => r.ok && !(r.wallS > slowS));
     if (!ok.length || ok.length / fresh.length < minRate) continue;
     out.push({ key, runs: fresh.length, ok: ok.length, rate: ok.length / fresh.length, fixtures: new Set(ok.map((r) => r.fixture)).size,
       medianS: median(ok.map((r) => r.wallS).filter((x) => x != null)), lastOk: ok[ok.length - 1].at });
@@ -106,4 +110,4 @@ function load(file = require('path').join(__dirname, 'model-evidence.json')) {
   try { return JSON.parse(require('fs').readFileSync(file, 'utf8')).models || {}; } catch { return {}; }
 }
 
-module.exports = { MAX_AGE_DAYS, MIN_RATE, BROAD, modelKey, recordsFrom, summarize, proven, matcher, load };
+module.exports = { MAX_AGE_DAYS, MIN_RATE, BROAD, SLOW_S, modelKey, recordsFrom, summarize, proven, matcher, load };

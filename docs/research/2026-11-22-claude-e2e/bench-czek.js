@@ -279,8 +279,12 @@ const SECRET = /(sk-[A-Za-z0-9_-]{8,}|gsk_[A-Za-z0-9]{8,}|AIza[A-Za-z0-9_-]{8,}|
   } catch (e) { res.error = String(e.message || e).replace(SECRET, '***').slice(0, 300); res.omniLog = logs.slice(-8).map((l) => l.replace(SECRET, '***').slice(0, 200)); }
   await cleanup();
   const tag = process.env.BENCH_TAG ? `-${process.env.BENCH_TAG}` : '';
-  fs.writeFileSync(path.join(out, `czek-${FIXTURE}-${TIER}${tag}.json`), JSON.stringify(res, null, 1));
+  // stejný tag dvakrát po sobě (víc běhů jedné úlohy) nepřepíše předchozí výsledek
+  let outFile = path.join(out, `czek-${FIXTURE}-${TIER}${tag}.json`);
+  for (let i = 2; fs.existsSync(outFile); i++) outFile = path.join(out, `czek-${FIXTURE}-${TIER}${tag}-${i}.json`);
+  fs.writeFileSync(outFile, JSON.stringify(res, null, 1));
   console.log(JSON.stringify({ path: 'czek', tier: TIER, success: res.success, tests: `${res.testsPass}/${(res.testsPass || 0) + (res.testsFail || 0)}`, wallS: res.wallS, setupS: res.setupS, steps: res.steps, winners: res.raceWinners, error: res.error }));
-  if (!process.env.BENCH_KEEP) fs.rmSync(root, { recursive: true, force: true });
+  // Windows: OpenCode/OmniRoute ještě chvíli drží soubory → EPERM; opakovat, a když ani tak, nechat složku být
+  if (!process.env.BENCH_KEEP) { try { fs.rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 500 }); } catch (e) { console.error('úklid ' + root + ': ' + e.code); } }
   process.exit(0);
 })().catch((e) => { console.error(e); process.exit(1); });

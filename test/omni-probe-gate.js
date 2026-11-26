@@ -49,7 +49,7 @@ function makeMock() {
       const id = String(b.model || '').split('/').pop();
       const m = HEAD.find((x) => x.id === id);
       hits[id] = (hits[id] || 0) + 1;
-      if (!b.stream) probeHits[id] = (probeHits[id] || 0) + 1; else raceHits[id] = (raceHits[id] || 0) + 1;
+      if (Number(b.max_tokens) >= 16) probeHits[id] = (probeHits[id] || 0) + 1; else raceHits[id] = (raceHits[id] || 0) + 1;
       if (!m) { res.writeHead(404, { 'content-type': 'application/json' }); res.end('{"error":"unknown"}'); return; }
       if (server.dead && id === 'die0') {
         server.deadHits = (server.deadHits || 0) + 1;

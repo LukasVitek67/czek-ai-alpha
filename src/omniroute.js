@@ -1280,22 +1280,56 @@ class OmniRoute {
     if (created.size) this.log(`OmniRoute: nová combo importem ${created.size}/${fresh.length}`);
   }
 
-  // maxTokens 16, ne 1 (25. 11., docs/research/2026-11-25-probe-concurrency): OpenRouter přes OmniRoute na max_tokens 1
-  // neodpoví vůbec (30 s ticho u ERNIE, Nemotron Ultra, particle-1, Gemma 4 – i když má vrátit 429), od 8 výš vrátí
-  // skutečný stav za 3–4 s (200, nebo 429 vyčerpaného limitu). S 1 kontrola brala nejlepší modely za visící.
+  // Dotaz kontroly STREAMUJE a měří čas do prvního smysluplného tokenu (obsah, uvažování nebo volání nástroje), pak
+  // spojení zavře – stejně jako krok závodu (src/race.js). Port ze smyčky Strata (loop/czek-perf, kola 37–42):
+  // kontrola na celou odpověď odsouvala modely, které agentovi odpovídají hned (Kilo Nemotron 3.5 Super VL bez streamu
+  // 10 s, první token 0,6 s; docs/research/2026-11-25-probe-concurrency). maxTokens 16, ne 1: OpenRouter přes OmniRoute
+  // na max_tokens 1 neodpoví vůbec (30 s ticho i místo 429), od 8 výš vrátí skutečný stav.
+  // ZDARMA_PROBE_STREAM=0 = postaru (celá odpověď) pro A/B.
   async probeOnce(ref, key, ms, { maxTokens = PROBE_MAX_TOKENS, content = 'Reply with OK.' } = {}) {
     const t = Date.now();
+    const stream = String(process.env.ZDARMA_PROBE_STREAM ?? '1') !== '0';
     try {
       const r = await fetch(`${this.url}/v1/chat/completions`, {
         method: 'POST', signal: AbortSignal.timeout(ms),
-        headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
-        body: JSON.stringify({ model: ref, messages: [{ role: 'user', content }], max_tokens: maxTokens, stream: false }),
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${key}`, ...(stream ? { accept: 'text/event-stream' } : {}) },
+        body: JSON.stringify({ model: ref, messages: [{ role: 'user', content }], max_tokens: maxTokens, stream }),
       });
       const status = r.status;
       // Tělo jen u chyby: u 400 je to jediná stopa, proč model „nefunguje“ (log jinak ukáže jen číslo).
-      const body = status === 200 ? null : (await r.text().catch(() => '')).replace(/\s+/g, ' ').trim().slice(0, 300);
-      return { status, ms: Date.now() - t, body };
-    } catch { return { status: 0, ms: Date.now() - t, body: null }; }
+      if (status !== 200) {
+        const body = (await r.text().catch(() => '')).replace(/\s+/g, ' ').trim().slice(0, 300);
+        return { status, ms: Date.now() - t, body };
+      }
+      // bez streamu, nebo poskytovatel vrátil celé JSON místo SSE: celá odpověď = obsah
+      if (!stream || !/event-stream/.test(String(r.headers.get('content-type') || ''))) {
+        await r.arrayBuffer().catch(() => {});
+        return { status, ms: Date.now() - t, body: null, firstToken: true };
+      }
+      const reader = r.body?.getReader?.();
+      if (!reader) { await r.arrayBuffer().catch(() => {}); return { status, ms: Date.now() - t, body: null, firstToken: true }; }
+      let buf = '';
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += Buffer.from(value).toString('utf8');
+        let nl;
+        while ((nl = buf.indexOf('\n')) >= 0) {
+          const line = buf.slice(0, nl); buf = buf.slice(nl + 1);
+          if (!line.startsWith('data:')) continue;
+          const payload = line.slice(5).trim();
+          if (!payload || payload === '[DONE]') continue;
+          let j = null; try { j = JSON.parse(payload); } catch { continue; }
+          if (j?.error) { try { reader.cancel(); } catch {} return { status: Number(j.error.code) || 502, ms: Date.now() - t, body: String(j.error.message || '').slice(0, 300) }; }
+          const d = j?.choices?.[0]?.delta || j?.choices?.[0]?.message || j?.delta || j;
+          if (!d) continue;
+          const hit = (Array.isArray(d.tool_calls) && d.tool_calls.length)
+            || ['content', 'reasoning_content', 'reasoning'].some((k) => typeof d[k] === 'string' && d[k].trim());
+          if (hit) { try { reader.cancel(); } catch {} return { status: 200, ms: Date.now() - t, body: null, firstToken: true }; }
+        }
+      }
+      return { status, ms: Date.now() - t, body: null, firstToken: false }; // stream skončil bez obsahu
+    } catch { return { status: 0, ms: Date.now() - t, body: null }; } // strop před prvním tokenem
   }
 
   /**

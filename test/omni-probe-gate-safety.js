@@ -51,7 +51,7 @@ function makeMock() {
       }
       const id = String(b.model || '').split('/').pop();
       const m = HEAD.find((x) => x.id === id);
-      if (!b.stream) probeHits[id] = (probeHits[id] || 0) + 1; else raceHits[id] = (raceHits[id] || 0) + 1;
+      if (Number(b.max_tokens) >= 16) probeHits[id] = (probeHits[id] || 0) + 1; else raceHits[id] = (raceHits[id] || 0) + 1;
       if (!m) { res.writeHead(404, { 'content-type': 'application/json' }); res.end('{"error":"unknown"}'); return; }
       if (server.dead && id === 'die0') {
         res.writeHead(503, { 'content-type': 'application/json' });
@@ -240,7 +240,8 @@ async function runArm(cfg) {
     try { eng.stop(); } catch {}
     try { mock.closeAllConnections(); } catch {}
     mock.close();
-    fs.rmSync(root, { recursive: true, force: true });
+    // OmniRoute po stop() ještě chvíli dopisuje (záznamy zrušených streamů kontroly) → mazat s opakováním, ne shodit test
+    try { fs.rmSync(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 250 }); } catch {}
   }
 }
 

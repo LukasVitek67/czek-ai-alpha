@@ -5,7 +5,9 @@
 //   2) model, který 400 vrací pořád, pauzu dostane a log ukáže tělo chyby (jinak se příčina nedá zjistit),
 //   3) zdravý model se zkouší jen jednou,
 //   4) model, který na max_tokens 1 mlčí (OpenRouter přes OmniRoute, 25. 11.), odpoví hned na první pokus (kontrola
-//      posílá max_tokens 16).
+//      posílá max_tokens 16),
+//   5) kontrola streamuje a stačí jí první token: model, který pošle první token hned a pak spojení drží, je funkční
+//      (kontrola na celou odpověď by vypršela); stream bez obsahu se pozná (firstToken false).
 // Žádná síť, žádná kvóta, nikdy nesahá na profil uživatele. Použití: node test/omni-probe-400.js
 const assert = require('assert');
 const fs = require('fs');
@@ -21,8 +23,10 @@ const MODELS = {
   always400: () => [400, { error: { message: 'unknown field thinking_budget' } }],
   healthy: () => [200, { choices: [{ message: { role: 'assistant', content: 'OK' } }] }],
   silentAt1: (b) => (Number(b.max_tokens) <= 1 ? null : [200, { choices: [{ message: { role: 'assistant', content: 'OK' } }] }]),
+  slowTail: 'sse-first-token-then-hold',
 };
 const maxTokensSeen = [];
+const streamSeen = [];
 
 const hits = {}; // id modelu → kolik dotazů dostal
 const mock = http.createServer((req, res) => {
@@ -35,6 +39,14 @@ const mock = http.createServer((req, res) => {
     const fn = MODELS[id];
     hits[id] = (hits[id] || 0) + 1;
     maxTokensSeen.push(Number(b.max_tokens));
+    streamSeen.push(b.stream === true);
+    if (fn === 'sse-first-token-then-hold') { // první token hned, pak 10 s nic (celá odpověď by přišla pozdě)
+      res.writeHead(200, { 'content-type': 'text/event-stream' });
+      res.write('data: ' + JSON.stringify({ choices: [{ delta: { role: 'assistant' } }] }) + '\n\n');
+      setTimeout(() => res.write('data: ' + JSON.stringify({ choices: [{ delta: { content: 'OK' } }] }) + '\n\n'), 50);
+      setTimeout(() => { try { res.end('data: [DONE]\n\n'); } catch {} }, 10000);
+      return;
+    }
     const out = fn ? fn(b) : [404, { error: { message: 'unknown model' } }];
     if (!out) return; // mlčí (spojení visí do timeoutu kontroly)
     const [status, body] = out;
@@ -57,10 +69,15 @@ const mock = http.createServer((req, res) => {
       { ref: 'q/always400', provider: 'q', id: 'always400' },
       { ref: 'r/healthy', provider: 'r', id: 'healthy' },
       { ref: 's/silentAt1', provider: 's', id: 'silentAt1' },
+      { ref: 't/slowTail', provider: 't', id: 'slowTail' },
     ]);
 
-    const res = await eng.probeHeads({ combos: ['zdarma-max'], timeoutMs: 3000, slowTimeoutMs: 0, concurrency: 4 });
-    assert.strictEqual(res.probed, 4, 'prošly všechny čtyři modely');
+    const res = await eng.probeHeads({ combos: ['zdarma-max'], timeoutMs: 3000, slowTimeoutMs: 0, concurrency: 5 });
+    assert.strictEqual(res.probed, 5, 'prošlo všech pět modelů');
+    assert.strictEqual(res.results['t/slowTail'], 200, 'první token hned, zbytek pozdě → funkční (kontrola na celou odpověď by za 3 s vypršela)');
+    assert.ok(streamSeen.every(Boolean), 'kontrola streamuje');
+    const st = await eng.probeOnce('t/slowTail', 'k'.repeat(32), 3000);
+    assert.ok(st.firstToken && st.ms < 1500, `čas do prvního tokenu, ne do konce (${st.ms} ms)`);
     assert.strictEqual(res.results['p/reasoner'], 200, '400 na max_tokens 1 → druhý pokus prošel');
     assert.strictEqual(res.results['q/always400'], 400, 'trvalé 400 zůstává 400');
     assert.strictEqual(res.results['r/healthy'], 200, 'zdravý model 200');

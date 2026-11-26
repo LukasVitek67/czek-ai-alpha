@@ -36,7 +36,7 @@ const DEAD = new Set(['hang0', 'limited']); // mrtvé pro závod
 
 function makeMock() {
   const hits = {};        // id → počet dotazů
-  const probeHits = {};   // id → počet probe dotazů (stream: false; kontrola posílá max_tokens 16)
+  const probeHits = {};   // id → počet probe dotazů (kontrola posílá max_tokens 16/64, závod v testu 8)
   const raceHits = {};        // id → počet race dotazů (max_tokens 8) – probe dotazy se nepočítí
   const server = http.createServer((req, res) => {
     let body = ''; req.on('data', (c) => (body += c));
@@ -50,7 +50,7 @@ function makeMock() {
       const id = String(b.model || '').split('/').pop();
       const m = HEAD.find((x) => x.id === id);
       hits[id] = (hits[id] || 0) + 1;
-      if (!b.stream) probeHits[id] = (probeHits[id] || 0) + 1; else raceHits[id] = (raceHits[id] || 0) + 1;
+      if (Number(b.max_tokens) >= 16) probeHits[id] = (probeHits[id] || 0) + 1; else raceHits[id] = (raceHits[id] || 0) + 1;
       if (!m) { res.writeHead(404, { 'content-type': 'application/json' }); res.end('{"error":"unknown"}'); return; }
       if (m.hang) {
         res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' });

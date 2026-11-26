@@ -8,7 +8,7 @@ const os = require('os');
 const path = require('path');
 
 const MARK = '.zdarma-skill.json';
-const CLAUDE_SKILLS = () => path.join(os.homedir(), '.claude', 'skills');
+const CLAUDE_SKILLS = () => process.env.ZDARMA_CLAUDE_SKILLS || path.join(os.homedir(), '.claude', 'skills');
 const hasSkill = (dir, name) => fs.existsSync(path.join(dir, name, 'SKILL.md'));
 const readJson = (f) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return null; } };
 

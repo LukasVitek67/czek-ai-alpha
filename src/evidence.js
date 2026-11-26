@@ -106,7 +106,8 @@ function matcher(models, now) {
   };
 }
 
-function load(file = require('path').join(__dirname, 'model-evidence.json')) {
+// CZEK_EVIDENCE_FILE = jiný soubor (test/tiers.js: pevná data, aby týdenní přeměření, které oprávněně změní pořadí, nerozbilo test)
+function load(file = process.env.CZEK_EVIDENCE_FILE || require('path').join(__dirname, 'model-evidence.json')) {
   try { return JSON.parse(require('fs').readFileSync(file, 'utf8')).models || {}; } catch { return {}; }
 }
 

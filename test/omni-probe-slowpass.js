@@ -236,7 +236,8 @@ async function unitChecks() {
       secondRoundProbeCalls: [A.secondRoundCost?.probeCallsAfter - A.secondRoundCost?.probeCallsBefore,
         B.secondRoundCost?.probeCallsAfter - B.secondRoundCost?.probeCallsBefore],
     } };
-  const out = arg('out', 'docs/research/loop-czek-perf/results/probe-slowpass-2026-11-22.json');
+  // výchozí výstup do tmp: běh testu nesmí přepsat archivní měření v docs/research (do archivu jen s --out=…)
+  const out = arg('out', path.join(os.tmpdir(), 'czek-probe-slowpass.json'));
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, JSON.stringify(res, null, 2));
   console.log(JSON.stringify(res, null, 2));

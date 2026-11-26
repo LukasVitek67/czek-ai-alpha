@@ -260,8 +260,11 @@ function createRaceProxy(o) {
           events.push(ev);
           const j = parseData(ev);
           if (j && j.error && !got) { r.resetMs = cooldownResetMs(j); fail('chyba ve streamu: ' + JSON.stringify(j.error).slice(0, 160)); return; }
-          if (!got && j && !j.done && meaningful(j)) { got = true; r.tFirst = Date.now(); clearTimeout(timer); cb.onOutput(r); }
-          if (r.onEvent) r.onEvent(ev);
+          let committedHere = false;
+          if (!got && j && !j.done && meaningful(j)) { got = true; r.tFirst = Date.now(); clearTimeout(timer); cb.onOutput(r); committedHere = !!r.onEvent; }
+          // Když onOutput spustil commit synchronně, commit() už tuto událost poslal z bufferu (events) → neposílat
+          // ji přes onEvent znovu, jinak se první smysluplný kus odpovědi vítěze zdvojí („Done.Done.“).
+          if (r.onEvent && !committedHere) r.onEvent(ev);
         }
       });
       rs.on('end', () => { ended = true; r.tEnd = Date.now(); if (!got) fail('stream skončil bez obsahu'); else if (r.onEnd) r.onEnd(); });

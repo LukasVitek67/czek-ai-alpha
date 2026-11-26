@@ -199,7 +199,8 @@ async function unitChecks() {
       sumS: (A.race?.sumS ?? 0) - (B.race?.sumS ?? 0),
       deadInRaceHead: (A.candidates?.deadInHead ?? 0) - (B.candidates?.deadInHead ?? 0),
       deadUpstreamCalls: (A.race?.deadUpstreamCalls ?? 0) - (B.race?.deadUpstreamCalls ?? 0) } };
-  const out = arg('out', path.join(ROOT, 'docs/research/loop-czek-perf/results', 'probe-pause-' + new Date().toISOString().slice(0, 10) + '.json'));
+  // výchozí výstup do tmp: běh testu nesmí přepsat archivní měření v docs/research (do archivu jen s --out=…)
+  const out = arg('out', path.join(os.tmpdir(), 'czek-probe-pause.json'));
   fs.mkdirSync(path.dirname(out), { recursive: true });
   const json = JSON.stringify(res, null, 2).replace(SECRET, '***');
   fs.writeFileSync(out, json);

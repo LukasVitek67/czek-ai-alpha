@@ -74,6 +74,7 @@ async function run(race, pluginSrc, port, stallFirst = false) {
     target: () => upUrl,
     candidates: (m, n) => { asked.push(m); return m === 'zdarma-max' ? ['m/slow', 'm/fast', 'm/mid'].slice(0, n) : []; },
     n: () => (race ? 3 : 0),
+    hedgeMs: 0, // tento e2e testuje mechaniku závodu na 3 modely; odstupňovaný start (hedge) má vlastní test/race-hedge.js
     stallMs: 1500,
   });
   const proxyUrl = await proxy.listen(0);

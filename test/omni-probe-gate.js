@@ -226,7 +226,8 @@ async function runRep(freshMs) {
     },
   };
   res.pass = Object.values(res.gates).every(Boolean);
-  const out = arg('out', path.join(ROOT, 'docs/research/loop-czek-perf/results/probe-gate-2026-11-23.json'));
+  // výchozí výstup do tmp: běh testu nesmí přepsat archivní měření v docs/research (do archivu jen s --out=…)
+  const out = arg('out', path.join(os.tmpdir(), 'czek-probe-gate.json'));
   fs.writeFileSync(out, JSON.stringify(res, null, 2));
   console.log(JSON.stringify({ rounds: { A: res.A.rounds, B: res.B.rounds }, probeCalls: { A: res.A.probeCallsTotal, B: res.B.probeCallsTotal }, detectMs: { A: res.A.detectMs, B: res.B.detectMs }, failures: { A: res.A.failuresAfterKill, B: res.B.failuresAfterKill }, stepMsMedian: { A: res.A.stepMsMedian, B: res.B.stepMsMedian }, gates: res.gates, pass: res.pass }, null, 2));
   process.exit(0);

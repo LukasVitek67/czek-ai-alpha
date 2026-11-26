@@ -68,6 +68,14 @@ class ModelRegistry {
 
   async list(force = false) {
     if (!force && this.cache && Date.now() - this.cacheAt < 10 * 60 * 1000) return this.cache;
+    // rozběhnuté stahování sdílet: main.js ho pouští souběžně se startem OmniRoute a sync ho pak jen převezme
+    if (!force && this.listing) return this.listing;
+    const p = this.listFresh(force);
+    if (!force) { this.listing = p; p.finally(() => { if (this.listing === p) this.listing = null; }).catch(() => {}); }
+    return p;
+  }
+
+  async listFresh(force) {
     const models = [];
     const status = {};
     if (this.cacheFile && !this.lastLists) {

@@ -41,12 +41,12 @@ agenta, který umí opravdu pracovat na kódu – a aby ho celá třída mohla s
 
 ## Stažení (Linux x64, od 0.15.42)
 
-Z [Releases](https://github.com/LukasVitek67/czek-ai-alpha/releases/latest):
+Z [Releases](https://github.com/LukasVitek67/czek-ai-alpha/releases) (nejnovější linuxové balíčky: [v0.15.44-alpha](https://github.com/LukasVitek67/czek-ai-alpha/releases/tag/v0.15.44-alpha)):
 
 - **Ubuntu / Debian:** `czek-ai-…-linux-amd64.deb` → `sudo apt install ./czek-ai-…-linux-amd64.deb`, pak czek-ai v menu aplikací.
 - **Jakékoli distro bez instalace:** `czek-ai-…-linux-x64.tar.gz` → rozbal a spusť `./czek-ai`.
-- **AppImage:** `czek-ai-…-linux-x86_64.AppImage` → `chmod +x` a spusť. Na Ubuntu 24.04+ chybí FUSE 2: buď
-  `sudo apt install libfuse2t64`, nebo spusť s `--appimage-extract-and-run`.
+- **AppImage:** `czek-ai-…-linux-x86_64.AppImage` → `chmod +x` a spusť. Od 0.15.44 nepotřebuje `libfuse2` (starší AppImage na
+  Ubuntu 24.04+ bez něj nenaběhly).
 
 První start si sám stáhne Node.js, OpenCode a OmniRoute do tvého profilu (bez sudo, ~2–3 min). Bash a git bere ze systému.
 

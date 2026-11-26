@@ -12,9 +12,10 @@ const providers = require('../src/providers');
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'zd-regcache-'));
 const cacheFile = path.join(dir, 'provider-models.json');
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const calls = {};
 const behaviour = { fast: { ms: 10, ids: ['f1', 'f2'] }, slow: { ms: 10, ids: ['s1'] }, broken: { ms: 10, ids: ['b1'] } };
 const fake = (id) => ({ id, name: id, needsKey: false, baseUrl: 'http://x', headers: () => ({}),
-  async listModels() { const b = behaviour[id]; await wait(b.ms); if (b.fail) throw new Error('HTTP 401: bad key'); return b.ids.map((m) => ({ id: m, raw: { big: true } })); } });
+  async listModels() { calls[id] = (calls[id] || 0) + 1; const b = behaviour[id]; await wait(b.ms); if (b.fail) throw new Error('HTTP 401: bad key'); return b.ids.map((m) => ({ id: m, raw: { big: true } })); } });
 providers.PROVIDERS.splice(0, providers.PROVIDERS.length, fake('fast'), fake('slow'), fake('broken'));
 const { ModelRegistry } = require('../src/agent');
 const settings = { providers: {} };
@@ -57,6 +58,12 @@ const ids = (r) => r.models.map((m) => m.key).sort();
     // 5) bez cacheFile se chová jako dřív (ostatní místa v kódu a testy)
     behaviour.slow.ms = 300; behaviour.broken.fail = false;
     t = Date.now(); await new ModelRegistry(() => settings).list(); assert.ok(Date.now() - t >= 280, 'bez cacheFile se čeká');
+    // 6) souběžná volání (main.js: předstih při startu OmniRoute + sync) stáhnou seznamy jen jednou
+    for (const k of Object.keys(calls)) delete calls[k];
+    const r6 = new ModelRegistry(() => settings);
+    const [x6, y6] = await Promise.all([r6.list(), r6.list()]);
+    assert.strictEqual(x6, y6, 'obě volání dostanou týž výsledek');
+    assert.deepStrictEqual(calls, { fast: 1, slow: 1, broken: 1 }, 'každý poskytovatel jen jednou: ' + JSON.stringify(calls));
     console.log(`registry-cache OK (bez cache ${t1} ms, s cache ${t2} ms místo ~2000 ms; čerstvý seznam doplněn na pozadí; chyba se neschová)`);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 })().catch((e) => { console.error(e); process.exit(1); });

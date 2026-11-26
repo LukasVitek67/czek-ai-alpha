@@ -18,6 +18,11 @@ assert.deepEqual(cat.skills.map((s) => s.name).sort(), names, 'katalog pokrývá
 for (const s of cat.skills) assert.ok(s.what && s.summary && s.group && cat.sources[s.source], `návod pro ${s.name}`);
 
 const target = fs.mkdtempSync(path.join(os.tmpdir(), 'zdarma-skills-'));
+// Izolace: test nesmí záviset na skutečných ~/.claude/skills (na uživatelově PC tam je impeccable, ui-ux-pro-max…).
+const claudeSkills = fs.mkdtempSync(path.join(os.tmpdir(), 'zdarma-claude-'));
+process.env.ZDARMA_CLAUDE_SKILLS = claudeSkills;
+fs.mkdirSync(path.join(claudeSkills, 'app-debugging')); // jeden přibalený skill „už v ~/.claude“ → status 'claude'
+fs.writeFileSync(path.join(claudeSkills, 'app-debugging', 'SKILL.md'), '---\nname: app-debugging\n---\n');
 fs.mkdirSync(path.join(target, 'impeccable')); // „uživatelova“ složka bez značky – nesahat
 fs.writeFileSync(path.join(target, 'impeccable', 'SKILL.md'), '---\nname: impeccable\ndescription: moje\n---\n');
 let r = skills.sync({ bundleDir: bundle, targetDir: target, version: 't1' });
@@ -40,6 +45,8 @@ fs.writeFileSync(path.join(target, 'stary-skill', skills.MARK), '{}');
 skills.sync({ bundleDir: bundle, targetDir: target, version: 't2' });
 assert.ok(!fs.existsSync(path.join(target, 'stary-skill')), 'spravovaná kopie, kterou už Zdarma nemá, zmizí');
 fs.rmSync(target, { recursive: true, force: true });
+fs.rmSync(claudeSkills, { recursive: true, force: true });
+delete process.env.ZDARMA_CLAUDE_SKILLS;
 console.log('skills ok');
 
 // --- preferované rodiny modelů

@@ -1,0 +1,530 @@
+{
+ "updated": "2026-11-26T00:27:19.732Z",
+ "maxAgeDays": 45,
+ "minRate": 0.5,
+ "models": {
+  "glyph-cluster": [
+   {
+    "ok": true,
+    "wallS": null,
+    "fixture": "bugfix-5files",
+    "at": "2026-11-08T12:00:00Z",
+    "source": "test/capture-opencode.js bugfix (8/8, 6 kroků), komentář src/providers.js"
+   }
+  ],
+  "beam-free": [
+   {
+    "ok": true,
+    "wallS": null,
+    "fixture": "bugfix-5files",
+    "at": "2026-11-08T12:00:00Z",
+    "source": "test/capture-opencode.js bugfix (8/8, 13 kroků)"
+   }
+  ],
+  "nemotron-3-ultra-550b-a55b": [
+   {
+    "ok": true,
+    "wallS": null,
+    "fixture": "bugfix-5files",
+    "at": "2026-11-08T12:00:00Z",
+    "source": "test/capture-opencode.js bugfix (8/8, 11–15 kroků)"
+   },
+   {
+    "ok": true,
+    "wallS": 119.6,
+    "fixture": "feature",
+    "at": "2026-11-19T20:00:00Z",
+    "source": "docs/research/2026-11-19-audit/results/feature-0.15.17-zdarma-max.json (tier Max, vyhrával Nemotron)"
+   },
+   {
+    "ok": true,
+    "wallS": 115.7,
+    "fixture": "feature",
+    "at": "2026-11-22T01:01:59.234Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/e2e-feature-kilo-nvidia_nemotron-3-ultra-550b-a55b_free.json"
+   },
+   {
+    "ok": true,
+    "wallS": 155.4,
+    "fixture": "feature",
+    "at": "2026-11-22T01:04:59.285Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/e2e-feature-openrouter-nvidia_nemotron-3-ultra-550b-a55b_free.json"
+   },
+   {
+    "ok": true,
+    "wallS": 100.1,
+    "fixture": "feature",
+    "at": "2026-11-22T01:06:35.366Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-feature-zdarma-max.json"
+   },
+   {
+    "ok": true,
+    "wallS": 95.1,
+    "fixture": "feature",
+    "at": "2026-11-22T01:43:38.539Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-feature-zdarma-max-u2.json"
+   },
+   {
+    "ok": true,
+    "wallS": 115.1,
+    "fixture": "bugfix",
+    "at": "2026-11-22T03:43:40.974Z",
+    "source": "docs/research/loop-czek-perf/results/czek-bugfix-zdarma-max-u3-a.json"
+   },
+   {
+    "ok": true,
+    "wallS": 115.1,
+    "fixture": "feature",
+    "at": "2026-11-22T11:25:12.971Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-feature-zdarma-max-outcap-after.json"
+   },
+   {
+    "ok": true,
+    "wallS": 55.3,
+    "fixture": "bugfix",
+    "at": "2026-11-22T12:25:36.499Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-bugfix-zdarma-max-bugfix-u3.json"
+   },
+   {
+    "ok": true,
+    "wallS": 110.1,
+    "fixture": "project",
+    "at": "2026-11-22T13:54:11.788Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-project-zdarma-max-project-u4.json"
+   },
+   {
+    "ok": true,
+    "wallS": 75.1,
+    "fixture": "project",
+    "at": "2026-11-22T14:04:51.144Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-project-zdarma-max-project-u4b.json"
+   },
+   {
+    "ok": true,
+    "wallS": 110.1,
+    "fixture": "feature",
+    "at": "2026-11-22T15:08:01.200Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-feature-zdarma-max-evidence-u6.json"
+   },
+   {
+    "ok": true,
+    "wallS": 95.1,
+    "fixture": "bugfix",
+    "at": "2026-11-22T15:53:23.709Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-bugfix-zdarma-max-ernie-first-u7.json"
+   },
+   {
+    "ok": true,
+    "wallS": 235.2,
+    "fixture": "session",
+    "at": "2026-11-22T18:06:41.748Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-session-zdarma-max-u9c.json"
+   },
+   {
+    "ok": true,
+    "wallS": 255.3,
+    "fixture": "feature",
+    "at": "2026-11-22T18:38:17.072Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-feature-zdarma-max-pause-u10.json"
+   },
+   {
+    "ok": true,
+    "wallS": 120.1,
+    "fixture": "project",
+    "at": "2026-11-22T18:43:27.601Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-project-zdarma-max-pause-u10.json"
+   },
+   {
+    "ok": true,
+    "wallS": 155.2,
+    "fixture": "feature",
+    "at": "2026-11-22T19:07:16.950Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-feature-zdarma-max-reliab-u11.json"
+   },
+   {
+    "ok": true,
+    "wallS": 65.1,
+    "fixture": "bugfix",
+    "at": "2026-11-22T20:01:06.469Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-bugfix-zdarma-max-tiers-ev-u14.json"
+   },
+   {
+    "ok": true,
+    "wallS": 115.3,
+    "fixture": "bugfix",
+    "at": "2026-11-22T20:03:30.719Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-bugfix-zdarma-max-grace6-u15.json"
+   },
+   {
+    "ok": true,
+    "wallS": 461.3,
+    "fixture": "session",
+    "at": "2026-11-22T23:14:09.754Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-session-zdarma-max-session-na.json"
+   },
+   {
+    "ok": false,
+    "wallS": 475.5,
+    "fixture": "session",
+    "at": "2026-11-22T23:22:56.202Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-session-zdarma-max-session-nb.json"
+   },
+   {
+    "ok": true,
+    "wallS": 85.1,
+    "fixture": "bugfix",
+    "at": "2026-11-23T16:19:52.390Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-bugfix-zdarma-max-hedge-auto.json"
+   },
+   {
+    "ok": true,
+    "wallS": 175.2,
+    "fixture": "bugfix",
+    "at": "2026-11-23T16:22:29.481Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-bugfix-zdarma-max-hedge-0.json"
+   },
+   {
+    "ok": true,
+    "wallS": 80.1,
+    "fixture": "project",
+    "at": "2026-11-23T16:26:28.591Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-project-zdarma-max-hedge-auto.json"
+   },
+   {
+    "ok": true,
+    "wallS": 100.2,
+    "fixture": "project",
+    "at": "2026-11-23T16:28:57.879Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-project-zdarma-max-hedge-0.json"
+   },
+   {
+    "ok": true,
+    "wallS": 315.3,
+    "fixture": "repo",
+    "at": "2026-11-25T19:52:06.694Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-repo-zdarma-max-repo-0.15.42a.json"
+   },
+   {
+    "ok": true,
+    "wallS": 110.1,
+    "fixture": "bugfix",
+    "at": "2026-11-25T21:10:31.406Z",
+    "source": "docs/research/model-evidence-runs/2026-11-25/e2e-bugfix-kilo-nvidia_nemotron-3-ultra-550b-a55b_free.json"
+   }
+  ],
+  "north-mini-code": [
+   {
+    "ok": false,
+    "wallS": null,
+    "fixture": "bugfix-5files",
+    "at": "2026-11-08T12:00:00Z",
+    "source": "test/capture-opencode.js bugfix (2/8, vzdal to)"
+   }
+  ],
+  "gemini-3.6-flash": [
+   {
+    "ok": true,
+    "wallS": 199.4,
+    "fixture": "feature",
+    "at": "2026-11-19T20:00:00Z",
+    "source": "docs/research/2026-11-19-audit/results/feature-0.15.17-gemini-3-6-flash.json"
+   }
+  ],
+  "gemini-3-flash-preview": [
+   {
+    "ok": true,
+    "wallS": 235.4,
+    "fixture": "feature",
+    "at": "2026-11-19T20:00:00Z",
+    "source": "docs/research/2026-11-19-audit/results/feature-0.15.17-gemini-3-flash-preview.json"
+   },
+   {
+    "ok": true,
+    "wallS": 320.3,
+    "fixture": "feature",
+    "at": "2026-11-22T01:10:56.618Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-feature-zdarma-max-after-c1.json"
+   }
+  ],
+  "glm-4.5-flash": [
+   {
+    "ok": false,
+    "wallS": 484.6,
+    "fixture": "feature",
+    "at": "2026-11-19T20:00:00Z",
+    "source": "docs/research/2026-11-19-audit/results/feature-0.15.17-glm-4-5-flash.json (13/15)"
+   },
+   {
+    "ok": false,
+    "wallS": 120.4,
+    "fixture": "feature",
+    "at": "2026-11-22T00:48:01.336Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/e2e-feature-zai-glm-4.5-flash.json"
+   },
+   {
+    "ok": true,
+    "wallS": 795.8,
+    "fixture": "session",
+    "at": "2026-11-25T20:00:00.524Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-session-zdarma-max-session-0.15.42.json"
+   }
+  ],
+  "particle-1": [
+   {
+    "ok": true,
+    "wallS": 40.1,
+    "fixture": "feature",
+    "at": "2026-11-22T01:07:40.779Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/e2e-feature-openrouter-particle-ai_particle-1_free.json"
+   },
+   {
+    "ok": true,
+    "wallS": 130.1,
+    "fixture": "feature",
+    "at": "2026-11-22T01:21:20.496Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-feature-zdarma-max-after-c5.json"
+   },
+   {
+    "ok": true,
+    "wallS": 90.1,
+    "fixture": "feature",
+    "at": "2026-11-22T01:41:07.695Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-feature-zdarma-max-u1.json"
+   },
+   {
+    "ok": true,
+    "wallS": 116.3,
+    "fixture": "project",
+    "at": "2026-11-22T15:41:36.243Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/e2e-project-kilo-particle-ai_particle-1_free-u7.json"
+   },
+   {
+    "ok": false,
+    "wallS": 185.9,
+    "fixture": "session",
+    "at": "2026-11-26T00:16:40.066Z",
+    "source": "docs/research/2026-11-26-windows-vm/results/czek-session-zdarma-max-win-session.json"
+   }
+  ],
+  "qwen3.8-27b": [
+   {
+    "ok": false,
+    "wallS": 600.7,
+    "fixture": "feature",
+    "at": "2026-11-22T00:37:54.364Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/e2e-feature-groq-qwen_qwen3.8-27b.json"
+   }
+  ],
+  "ernie-5.5-flash-preview": [
+   {
+    "ok": true,
+    "wallS": 50.1,
+    "fixture": "feature",
+    "at": "2026-11-22T00:50:24.351Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/e2e-feature-openrouter-baidu_ernie-5.5-flash-preview_free.json"
+   },
+   {
+    "ok": true,
+    "wallS": 55.1,
+    "fixture": "feature",
+    "at": "2026-11-22T01:03:57.936Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/e2e-feature-kilo-baidu_ernie-5.5-flash-preview_free.json"
+   },
+   {
+    "ok": true,
+    "wallS": 25.1,
+    "fixture": "bugfix",
+    "at": "2026-11-22T15:41:04.315Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/e2e-bugfix-kilo-baidu_ernie-5.5-flash-preview_free-u7.json"
+   },
+   {
+    "ok": true,
+    "wallS": 95.3,
+    "fixture": "project",
+    "at": "2026-11-22T15:43:38.803Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/e2e-project-kilo-baidu_ernie-5.5-flash-preview_free-u7.json"
+   },
+   {
+    "ok": true,
+    "wallS": 40,
+    "fixture": "project",
+    "at": "2026-11-22T15:48:34.988Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-project-zdarma-max-ernie-first-u7.json"
+   },
+   {
+    "ok": true,
+    "wallS": 65.1,
+    "fixture": "feature",
+    "at": "2026-11-22T15:50:52.081Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-feature-zdarma-max-ernie-first-u7.json"
+   },
+   {
+    "ok": true,
+    "wallS": 105.1,
+    "fixture": "session",
+    "at": "2026-11-22T17:53:00.306Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-session-zdarma-max-u9.json"
+   },
+   {
+    "ok": false,
+    "wallS": 115.1,
+    "fixture": "session",
+    "at": "2026-11-22T18:03:16.072Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-session-zdarma-max-u9b.json"
+   },
+   {
+    "ok": true,
+    "wallS": 45,
+    "fixture": "feature",
+    "at": "2026-11-22T19:12:17.155Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-feature-zdarma-max-expected-u12.json"
+   },
+   {
+    "ok": true,
+    "wallS": 75.1,
+    "fixture": "bugfix",
+    "at": "2026-11-22T19:13:59.519Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-bugfix-zdarma-max-expected-u12.json"
+   },
+   {
+    "ok": true,
+    "wallS": 75.2,
+    "fixture": "project",
+    "at": "2026-11-22T19:16:16.168Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-project-zdarma-max-expected-u12.json"
+   },
+   {
+    "ok": true,
+    "wallS": 45,
+    "fixture": "project",
+    "at": "2026-11-22T19:21:42.164Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-project-zdarma-max-probe10-u13.json"
+   },
+   {
+    "ok": true,
+    "wallS": 25,
+    "fixture": "bugfix",
+    "at": "2026-11-22T22:54:13.026Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-bugfix-zdarma-max-sticky-on.json"
+   },
+   {
+    "ok": true,
+    "wallS": 35.2,
+    "fixture": "bugfix",
+    "at": "2026-11-22T22:55:42.139Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-bugfix-zdarma-max-sticky-off.json"
+   },
+   {
+    "ok": true,
+    "wallS": 20,
+    "fixture": "bugfix",
+    "at": "2026-11-22T22:57:17.818Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-bugfix-zdarma-max-sticky-on2.json"
+   },
+   {
+    "ok": true,
+    "wallS": 55.1,
+    "fixture": "feature",
+    "at": "2026-11-22T22:58:46.177Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-feature-zdarma-max-sticky-on.json"
+   },
+   {
+    "ok": true,
+    "wallS": 30,
+    "fixture": "project",
+    "at": "2026-11-22T23:00:39.566Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-project-zdarma-max-sticky-on.json"
+   },
+   {
+    "ok": true,
+    "wallS": 135.2,
+    "fixture": "session",
+    "at": "2026-11-22T23:02:14.055Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-session-zdarma-max-sticky-on.json"
+   },
+   {
+    "ok": true,
+    "wallS": 40.2,
+    "fixture": "repo",
+    "at": "2026-11-25T19:58:20.775Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/czek-repo-zdarma-max-repo-0.15.42b.json"
+   },
+   {
+    "ok": true,
+    "wallS": 30,
+    "fixture": "feature",
+    "at": "2026-11-25T21:03:04.794Z",
+    "source": "docs/research/model-evidence-runs/2026-11-25/czek-feature-zdarma-max-weekly.json"
+   },
+   {
+    "ok": true,
+    "wallS": 25,
+    "fixture": "bugfix",
+    "at": "2026-11-25T21:04:37.499Z",
+    "source": "docs/research/model-evidence-runs/2026-11-25/czek-bugfix-zdarma-max-weekly.json"
+   },
+   {
+    "ok": true,
+    "wallS": 45,
+    "fixture": "project",
+    "at": "2026-11-25T21:05:58.357Z",
+    "source": "docs/research/model-evidence-runs/2026-11-25/czek-project-zdarma-max-weekly.json"
+   },
+   {
+    "ok": true,
+    "wallS": 65.6,
+    "fixture": "bugfix",
+    "at": "2026-11-26T00:03:50.214Z",
+    "source": "docs/research/2026-11-26-windows-vm/results/czek-bugfix-zdarma-max-win-bugfix.json"
+   },
+   {
+    "ok": true,
+    "wallS": 45.4,
+    "fixture": "feature",
+    "at": "2026-11-26T00:07:18.407Z",
+    "source": "docs/research/2026-11-26-windows-vm/results/czek-feature-zdarma-max-win-feature.json"
+   },
+   {
+    "ok": true,
+    "wallS": 76.8,
+    "fixture": "repo",
+    "at": "2026-11-26T00:10:28.649Z",
+    "source": "docs/research/2026-11-26-windows-vm/results/czek-repo-zdarma-max-win-repo.json"
+   }
+  ],
+  "ministral-14b-2512": [
+   {
+    "ok": false,
+    "wallS": 600.7,
+    "fixture": "feature",
+    "at": "2026-11-22T00:51:44.081Z",
+    "source": "docs/research/2026-11-22-claude-e2e/results/e2e-feature-mistral-ministral-14b-2512.json"
+   }
+  ],
+  "kimi-k3.1-pro": [
+   {
+    "ok": false,
+    "wallS": 900.9,
+    "fixture": "bugfix",
+    "at": "2026-11-22T16:39:33.146Z",
+    "source": "docs/research/model-evidence-runs/2026-11-22/e2e-bugfix-nvidia-moonshotai_kimi-k3.1-pro.json"
+   },
+   {
+    "ok": false,
+    "wallS": 900.8,
+    "fixture": "bugfix",
+    "at": "2026-11-25T21:12:24.475Z",
+    "source": "docs/research/model-evidence-runs/2026-11-25/e2e-bugfix-nvidia-moonshotai_kimi-k3.1-pro.json"
+   }
+  ],
+  "glm-5.3-flash": [
+   {
+    "ok": true,
+    "wallS": 780.8,
+    "fixture": "bugfix",
+    "at": "2026-11-25T21:27:31.293Z",
+    "source": "docs/research/model-evidence-runs/2026-11-25/e2e-bugfix-nvidia-z-ai_glm-5.3-flash.json"
+   }
+  ]
+ }
+}

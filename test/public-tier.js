@@ -27,12 +27,13 @@ const { PublicTier, demoted, summarize, outcome, keyOf } = require('../src/publi
     assert.deepStrictEqual(ax, { model: 'a/x', ok: 2, fail: 1, rate_limited: 1, no_credit: 0, timeout: 0, p50_ms: 100 });
 
     // 3) dav jen shazuje: málo instalací / málo volání / nedávný úspěch → nic
-    const now = Date.parse('2026-11-23T12:00:00Z');
+    // data relativně k teď: pull() dole volá demoted() se skutečným Date.now(), pevná data by po pár dnech odsunula p/recent
+    const now = Date.now();
     const rows = [
-      { model: 'p/dead', installs: 6, ok: 2, fail: 60, last_ok: '2026-11-22T12:00:00Z' },
+      { model: 'p/dead', installs: 6, ok: 2, fail: 60, last_ok: new Date(now - 25 * 3600000).toISOString() }, // úspěch > 6 h → odsunout
       { model: 'p/few', installs: 3, ok: 0, fail: 90, last_ok: null },
-      { model: 'p/recent', installs: 8, ok: 5, fail: 80, last_ok: '2026-11-23T11:00:00Z' },
-      { model: 'p/good', installs: 9, ok: 90, fail: 5, last_ok: '2026-11-23T11:59:00Z' },
+      { model: 'p/recent', installs: 8, ok: 5, fail: 80, last_ok: new Date(now - 3600000).toISOString() }, // úspěch před 1 h → neodsouvat
+      { model: 'p/good', installs: 9, ok: 90, fail: 5, last_ok: new Date(now - 60000).toISOString() },
       { model: 'p/little', installs: 7, ok: 0, fail: 10, last_ok: null },
     ];
     assert.deepStrictEqual([...demoted(rows, { now })], ['p/dead'], 'only broadly failing model demoted');

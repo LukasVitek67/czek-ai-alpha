@@ -1,5 +1,7 @@
 // Test tierlistů: kontext modelů a tierlistu (automaticky / vlastní), zařazení podle síly.
 'use strict';
+// Pevná data měření (src/model-evidence.json se mění týdenním přeměřením a test by pak blokoval jeho commit – 25. 11. se to stalo).
+process.env.CZEK_EVIDENCE_FILE = require('path').join(__dirname, 'fixtures', 'model-evidence-tiers.json');
 const assert = require('assert');
 const t = require('../src/tiers');
 const { providerBlock } = require('../src/opencode');

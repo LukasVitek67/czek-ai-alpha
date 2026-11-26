@@ -1,7 +1,7 @@
 {
   "name": "czek-ai",
   "productName": "czek-ai",
-  "version": "0.15.43",
+  "version": "0.15.44",
   "description": "czek-ai (Czech AI · čekaj) – kódovací agent (OpenCode + OmniRoute) nad free modely z mnoha poskytovatelů",
   "main": "src/main.js",
   "author": "Lukas Vitek",
@@ -86,6 +86,9 @@
     },
     "deb": {
       "artifactName": "czek-ai-${version}-linux-${arch}.${ext}"
+    },
+    "toolsets": {
+      "appimage": "1.0.3"
     }
   },
   "homepage": "https://github.com/LukasVitek67/czek-ai-alpha"

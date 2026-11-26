@@ -289,7 +289,8 @@ async function runArm(cfg) {
     silentDeathCaughtByRace: D.dieRaceCallsAfterKill === 0 && (D.detectMs ?? 1e9) <= 5000,
   };
   res.pass = Object.values(res.gates).every(Boolean);
-  const out = arg('out', path.join(ROOT, 'docs/research/loop-czek-perf/results/probe-gate-safety-2026-11-23.json'));
+  // výchozí výstup do tmp: běh testu nesmí přepsat archivní měření v docs/research (do archivu jen s --out=…)
+  const out = arg('out', path.join(os.tmpdir(), 'czek-probe-gate-safety.json'));
   fs.writeFileSync(out, JSON.stringify(res, null, 2));
   console.log(JSON.stringify({
     probeCalls: { A: A.probeCallsTotal, B: B.probeCallsTotal, C: C.probeCallsTotal, D: D.probeCallsTotal, E: E.probeCallsTotal, F: F.probeCallsTotal, G: G.probeCallsTotal },

@@ -449,7 +449,11 @@ function initVideoDock() {
   bar.append(btn('◀', T('oc.videoPrev'), () => go(-1)), name, btn('▶', T('oc.videoNext'), () => go(1)), sound, btn('✕', T('oc.videoHide'), () => { hidden = true; frame.src = 'about:blank'; wrap.style.display = 'none'; }));
   wrap.append(frame, bar);
   document.body.append(wrap);
-  frame.src = src();
+  // src až po „load“ okna: rámeček s adresou nastavenou dřív je součástí načítání stránky, takže když YouTube neodpovídá
+  // (školní síť zahazuje pakety, skryté okno), OpenCode „dokončí načtení“ až po ~5 min timeoutu a vše, co na to čeká
+  // (hlídač instance…), se zdrží (26. 11.: did-finish-load za 4 min 47 s, ERR_TIMED_OUT youtube-nocookie.com).
+  const start = () => { if (!hidden) frame.src = src(); };
+  if (document.readyState === 'complete') start(); else window.addEventListener('load', start, { once: true });
   paint();
   // poloha: nad pravým okrajem pole pro prompt; bez pole (úvodní obrazovka) schované
   const place = () => {
@@ -479,9 +483,9 @@ function initUpgradeBar() {
     const bar = el('div');
     bar.setAttribute('data-czek-upgrade', '');
     bar.style.cssText = 'position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:10px;padding:6px 12px;border-radius:8px;background:#1f6f43;color:#fff;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.35)';
-    bar.append(el('span', null, T('oc.upgradeReady', { v: u.version, cur: u.current })));
+    bar.append(el('span', null, u.dev ? T('oc.devUpgradeReady', { v: u.version, s: u.subject }) : T('oc.upgradeReady', { v: u.version, cur: u.current })));
     const go = el('button', null, T('oc.upgradeGo'));
-    go.title = T('oc.upgradeGoTitle');
+    go.title = T(u.dev ? 'oc.devUpgradeGoTitle' : 'oc.upgradeGoTitle');
     go.style.cssText = 'background:#fff;color:#1f6f43;border:0;border-radius:5px;padding:3px 10px;font-weight:600;cursor:pointer';
     go.onclick = async () => { go.disabled = true; go.textContent = T('oc.upgradeBusy'); const ok = await ipcRenderer.invoke('app:upgrade').catch(() => false); if (!ok) { go.disabled = false; go.textContent = T('oc.upgradeGo'); } };
     const later = el('button', null, '✕');
@@ -495,4 +499,160 @@ function initUpgradeBar() {
   setInterval(() => { if (!document.querySelector('[data-czek-upgrade]') || shown) check(); }, 60000);
 }
 
-window.addEventListener('DOMContentLoaded', () => { initLimits(); initActive(); initModelPopupBar(); initNoModelsWatch(); initVideoDock(); initUpgradeBar(); });
+// ------------------------------------------------------------ Presety chatu (uživatel 26. 11.)
+
+// Nová relace (draft /new-session): místo loga OpenCode výběr presetu (src/presets). Preset = primární agent OpenCode
+// (src/opencode.js applyPresets), plán a povinné skills mu do promptu přidá czek-guard. Klik přepne NATIVNÍ výběr agenta
+// v liště promptu (stejné menu jako pod tlačítkem „Build“), takže stav drží OpenCode a ruční přepnutí se tu srovná.
+// Vzhled = tokeny OpenCode (Inter, tenký ring jako u pole promptu); kompaktní režim pro nízká okna (školní 1366×768 / 125 %).
+const PRESET_CSS = `
+[data-czek-presets]{font-family:inherit;color:var(--text-base,#a0a0a0)}
+[data-czek-presets] .cp-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin:0 2px 10px}
+[data-czek-presets] .cp-title{font-size:14px;line-height:20px;font-weight:500;color:var(--text-strong,#ededed)}
+[data-czek-presets] .cp-hint{font-size:12px;line-height:16px;color:var(--text-base,#a0a0a0)}
+[data-czek-presets] .cp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:4px}
+[data-czek-presets] .cp-opt{all:unset;box-sizing:border-box;display:grid;grid-template-columns:8px auto minmax(0,1fr);align-items:center;column-gap:10px;height:36px;padding:0 12px;border-radius:8px;cursor:pointer;
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--text-strong,#888) 11%,transparent);transition:background-color .16s cubic-bezier(.25,1,.5,1),box-shadow .16s cubic-bezier(.25,1,.5,1)}
+[data-czek-presets] .cp-opt:hover{background:var(--surface-base-hover,rgba(127,127,127,.08));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--text-strong,#888) 22%,transparent)}
+[data-czek-presets] .cp-opt:active{background:color-mix(in srgb,var(--c) 18%,transparent)}
+[data-czek-presets] .cp-opt[aria-checked="true"]{background:color-mix(in srgb,var(--c) 14%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--c) 75%,transparent)}
+[data-czek-presets] .cp-opt:focus-visible{outline:2px solid var(--c);outline-offset:2px}
+[data-czek-presets][aria-busy="true"] .cp-opt{cursor:progress}
+[data-czek-presets] .cp-mark{width:8px;height:8px;border-radius:2px;background:var(--c)}
+[data-czek-presets] .cp-name{font-size:13px;line-height:18px;font-weight:500;color:var(--text-strong,#ededed);white-space:nowrap}
+[data-czek-presets] .cp-desc{font-size:12px;line-height:16px;color:var(--text-base,#a0a0a0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+[data-czek-presets] .cp-status{margin:10px 2px 0;min-height:16px;font-size:12px;line-height:16px;color:var(--text-base,#a0a0a0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+[data-czek-presets] .cp-status code{font-family:ui-monospace,"Cascadia Mono",Consolas,monospace;font-size:11.5px;color:var(--text-strong,#ededed)}
+[data-czek-presets] .cp-status.cp-fail{color:var(--text-strong,#ededed)}
+@media (max-height:720px){[data-czek-presets] .cp-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}[data-czek-presets] .cp-desc,[data-czek-presets] .cp-hint{display:none}[data-czek-presets] .cp-opt{grid-template-columns:8px minmax(0,1fr);height:32px}[data-czek-presets] .cp-name{overflow:hidden;text-overflow:ellipsis}}
+@media (prefers-reduced-motion:reduce){[data-czek-presets] .cp-opt{transition:none}}`;
+
+function initPresetPicker() {
+  const list = Array.isArray(PREFS.presets) ? PREFS.presets.filter((p) => p && typeof p.agent === 'string') : [];
+  if (list.length < 2) return; // presety vypnuté nebo bez plánů → OpenCode beze změny
+  const style = document.createElement('style');
+  style.textContent = PRESET_CSS;
+  document.head.append(style);
+  const known = new Set([...list.map((p) => p.agent), 'build', 'plan']);
+  let host = null; let logo = null; let busy = false; let failUntil = 0;
+  const isNew = () => location.pathname.includes('new-session');
+  const promptBox = () => document.querySelector('[aria-label="Prompt"]') || document.querySelector('form [contenteditable="true"]');
+  // tlačítko agenta v liště promptu: aria-label je podle jazyka, poznáme ho podle textu = jméno aktuálního agenta
+  const trigger = () => [...document.querySelectorAll('form button[aria-haspopup]')].find((b) => known.has(b.textContent.trim().toLowerCase()));
+  const current = () => trigger()?.textContent.trim().toLowerCase() || null;
+  const ptr = { bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', button: 0, isPrimary: true };
+  const press = (e) => { e.dispatchEvent(new PointerEvent('pointerdown', ptr)); e.dispatchEvent(new MouseEvent('mousedown', ptr)); e.dispatchEvent(new PointerEvent('pointerup', ptr)); e.dispatchEvent(new MouseEvent('mouseup', ptr)); e.click(); };
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const focusPrompt = () => { try { promptBox()?.focus(); } catch {} };
+
+  // zapisuje jen při změně (stavový řádek je mutace DOM → observer → update by jinak běžel každý snímek)
+  let shown = '';
+  function update() {
+    if (!host) return;
+    const cur = current() || 'build';
+    for (const b of host.querySelectorAll('.cp-opt')) { const v = String(b.dataset.agent === cur); if (b.getAttribute('aria-checked') !== v) b.setAttribute('aria-checked', v); }
+    const failing = Date.now() < failUntil;
+    const want = failing ? 'fail' : `active:${cur}`;
+    if (want === shown) return;
+    shown = want;
+    const status = host.querySelector('.cp-status');
+    status.classList.toggle('cp-fail', failing);
+    if (failing) { status.textContent = T('oc.presetFail'); return; }
+    const p = list.find((x) => x.agent === cur) || { agent: cur, skills: 0 };
+    status.replaceChildren(`${T('oc.presetActive')} `, el('code', '', p.agent), ` · ${p.skills ? T('oc.presetSkills', { n: p.skills }) : T('oc.presetAuto')}`);
+  }
+  const fail = () => { failUntil = Date.now() + 8000; update(); setTimeout(update, 8100); };
+
+  // Položka menu agenta (Kobalte) se vybere až po najetí ukazatelem: pointermove/enter, pak stisk (ověřeno 26. 11.).
+  async function choose(agent) {
+    if (busy) return;
+    if (current() === agent) { failUntil = 0; update(); focusPrompt(); return; }
+    const t = trigger();
+    if (!t) { fail(); return; }
+    busy = true; host?.setAttribute('aria-busy', 'true');
+    try {
+      t.dispatchEvent(new PointerEvent('pointerdown', ptr)); t.click();
+      let items = [];
+      for (let i = 0; i < 25 && !items.length; i++) { await wait(40); items = [...document.querySelectorAll('[role="menuitemradio"]')]; }
+      const it = items.find((x) => x.textContent.trim().toLowerCase() === agent);
+      if (!it) { items[0]?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); fail(); return; }
+      it.dispatchEvent(new PointerEvent('pointermove', ptr));
+      it.dispatchEvent(new PointerEvent('pointerenter', { ...ptr, bubbles: false }));
+      await wait(30);
+      press(it);
+      for (let i = 0; i < 20 && current() !== agent; i++) await wait(25);
+      if (current() === agent) failUntil = 0; else fail();
+    } finally {
+      busy = false; host?.removeAttribute('aria-busy'); update(); focusPrompt();
+    }
+  }
+
+  function render() {
+    const h = el('div');
+    h.setAttribute('data-czek-presets', '');
+    const head = el('div', 'cp-head');
+    head.append(el('div', 'cp-title', T('oc.presetTitle')), el('div', 'cp-hint', T('oc.presetHint')));
+    const grid = el('div', 'cp-grid');
+    grid.setAttribute('role', 'radiogroup');
+    grid.setAttribute('aria-label', T('oc.presetGroup'));
+    const status = el('div', 'cp-status');
+    status.setAttribute('aria-live', 'polite');
+    for (const p of list) {
+      const b = el('button', 'cp-opt');
+      b.type = 'button';
+      b.setAttribute('role', 'radio');
+      b.dataset.agent = p.agent;
+      b.style.setProperty('--c', /^#[0-9a-f]{6}$/i.test(p.color || '') ? p.color : '#8A8F98');
+      b.title = p.desc || '';
+      b.append(el('span', 'cp-mark'), el('span', 'cp-name', p.name || p.agent), el('span', 'cp-desc', p.tag || ''));
+      b.addEventListener('click', () => choose(p.agent));
+      // náhled: plný popis ve stavovém řádku při najetí / fokusu
+      const peek = () => { if (!busy && Date.now() >= failUntil) { status.classList.remove('cp-fail'); status.textContent = p.desc || p.name; shown = 'peek'; } };
+      b.addEventListener('mouseenter', peek);
+      b.addEventListener('focus', peek);
+      b.addEventListener('mouseleave', update);
+      b.addEventListener('blur', update);
+      b.addEventListener('keydown', (e) => {
+        const all = [...grid.querySelectorAll('.cp-opt')];
+        const i = all.indexOf(b);
+        const to = { ArrowRight: i + 1, ArrowDown: i + 1, ArrowLeft: i - 1, ArrowUp: i - 1, Home: 0, End: all.length - 1 }[e.key];
+        if (to == null) return;
+        e.preventDefault();
+        all[(to + all.length) % all.length].focus();
+      });
+      grid.append(b);
+    }
+    h.append(head, grid, status);
+    return h;
+  }
+
+  const check = () => {
+    if (!isNew()) {
+      if (host) { host.remove(); host = null; }
+      if (logo) { logo.style.display = ''; logo = null; }
+      return;
+    }
+    const form = promptBox()?.closest('form');
+    if (!form) return;
+    let col = form;
+    while (col && !String(col.className || '').includes('max-w-')) col = col.parentElement;
+    col = col || form.parentElement;
+    if (!host || !host.isConnected) {
+      host = render();
+      shown = '';
+      const lg = [...col.children].find((c) => !c.contains(form) && (c.matches('svg') || c.querySelector('svg')));
+      if (lg) { lg.style.display = 'none'; logo = lg; }
+      col.insertBefore(host, col.firstChild);
+    }
+    update();
+  };
+  let queued = false;
+  new MutationObserver(() => {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(() => { queued = false; if (!busy) check(); });
+  }).observe(document.documentElement, { childList: true, subtree: true, characterData: true });
+  check();
+}
+
+window.addEventListener('DOMContentLoaded', () => { initLimits(); initActive(); initModelPopupBar(); initNoModelsWatch(); initVideoDock(); initUpgradeBar(); initPresetPicker(); });

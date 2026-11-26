@@ -7,13 +7,21 @@
 # Spotřebuje free kvóty (~11 úloh), proto jen jednou týdně.
 set -u
 export PATH="$HOME/.local/bin:$HOME/.local/node/bin:$PATH"
-REPO="$(cd "$(dirname "$0")/.." && pwd)"
-cd "$REPO" || exit 1
+REPO_MAIN="$(cd "$(dirname "$0")/.." && pwd)"
+# Vlastní dočasný worktree z origin/main: sdílená složka bývá rozdělaná od jiných session a 25. 11. tam `git pull` selhal
+# („You have unstaged changes“) → běh pokračoval na starém kódu. Výsledek se commitne a pushne z worktree.
+git -C "$REPO_MAIN" fetch -q origin main || exit 1
+WT="$(mktemp -d)/czek-weekly"
+git -C "$REPO_MAIN" worktree add -q --detach "$WT" origin/main || exit 1
+ln -s "$REPO_MAIN/node_modules" "$WT/node_modules"
 OUT="docs/research/model-evidence-runs/$(date +%Y-%m-%d)"
+# log a výsledky vždy zpět do sdílené složky (i když se necommitne), worktree pryč
+trap 'mkdir -p "$REPO_MAIN/$OUT" && cp -r "$WT/$OUT/." "$REPO_MAIN/$OUT/" 2>/dev/null; git -C "$REPO_MAIN" worktree remove --force "$WT" >/dev/null 2>&1' EXIT
+REPO="$WT"
+cd "$REPO" || exit 1
 mkdir -p "$OUT"
 LOG="$OUT/run.log"
-echo "== $(date -Is) týdenní přeměření" >> "$LOG"
-git pull -q --rebase origin main >> "$LOG" 2>&1
+echo "== $(date -Is) týdenní přeměření (worktree $WT z $(git rev-parse --short HEAD))" >> "$LOG"
 
 # WEEKLY_QUICK=1: jen ověření řetězce (bez bench-czek, 1 automatický kandidát, bez commitu)
 QUICK="${WEEKLY_QUICK:-0}"
@@ -43,7 +51,7 @@ if node test/evidence.js >> "$LOG" 2>&1 && node test/tiers.js >> "$LOG" 2>&1; th
   if [ "$QUICK" = 1 ]; then echo "QUICK: bez commitu" >> "$LOG"; exit 0; fi
   git add src/model-evidence.json "$OUT"
   git commit -q -m "chore(models): weekly re-measurement $(date +%Y-%m-%d) – proven models from measurements" >> "$LOG" 2>&1
-  git push -q origin main >> "$LOG" 2>&1
+  git push -q origin HEAD:main >> "$LOG" 2>&1 || { git pull -q --rebase origin main >> "$LOG" 2>&1 && git push -q origin HEAD:main >> "$LOG" 2>&1; } || { echo "push selhal" >> "$LOG"; exit 1; }
 else
   echo "testy selhaly – necommituji" >> "$LOG"; exit 1
 fi

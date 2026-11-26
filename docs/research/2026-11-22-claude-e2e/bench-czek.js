@@ -223,7 +223,10 @@ const SECRET = /(sk-[A-Za-z0-9_-]{8,}|gsk_[A-Za-z0-9]{8,}|AIza[A-Za-z0-9_-]{8,}|
       req.on('error', () => { answered = true; });
       req.end(body);
       let idleSeen = 0;
-      while (!answered) {
+      // BENCH_SETTLE (výchozí 1): po odpovědi na zprávu čekat, až relace stojí 15 s – pokračování guardu (build, prázdný
+      // slib, kontrola požadavků) přijde až po prvním idle a bez čekání by se míjelo s dalším zadáním / vyhodnocením.
+      const settle = process.env.BENCH_SETTLE !== '0';
+      while (!answered || (settle && idleSeen < 3)) {
         await wait(5000);
         if (Date.now() - t1 > LIMIT_MS) { timedOut = true; break; }
         const st = await get('/session/status'); const mine = st && st[s.id];
@@ -239,6 +242,8 @@ const SECRET = /(sk-[A-Za-z0-9_-]{8,}|gsk_[A-Za-z0-9]{8,}|AIza[A-Za-z0-9_-]{8,}|
     res.wallS = Math.round((Date.now() - t1) / 100) / 10; res.timedOut = timedOut;
     const msgs = (await get(`/session/${s.id}/message`, 60000)) || [];
     const asst = msgs.filter((m) => m.info.role === 'assistant');
+    // výzvy guardu, které agent opravdu dostal (kontrola požadavků, prázdný slib, build…)
+    res.guardNudges = msgs.filter((m) => m.info.role === 'user' && m.parts.some((p) => p.type === 'text' && /^(Before you finish|You answered as if|The project still|Your previous reply|The model stopped)/.test(p.text || ''))).length;
     const tools = asst.flatMap((m) => m.parts.filter((p) => p.type === 'tool'));
     const by = {}; for (const t of tools) by[t.tool] = (by[t.tool] || 0) + 1;
     res.steps = asst.length; res.tools = by; res.toolErrors = tools.filter((t) => t.state?.status === 'error').length;

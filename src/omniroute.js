@@ -12,7 +12,10 @@ const net = require('net');
 const path = require('path');
 const { spawn, spawnSync } = require('child_process');
 const tiers = require('./tiers');
-const { chatUrlOf } = require('./providers');
+const { chatUrlOf, PROVIDERS: ALL_PROVIDERS } = require('./providers');
+// Poskytovatelé bez klíče: limit je na IP adresu (Kilo ~200/h i s účtem), ve třídě ho sdílí 30 instalací najednou.
+const IP_SHARED = new Set(ALL_PROVIDERS.filter((p) => !p.needsKey && !p.local).map((p) => p.id));
+const PROBE_SHARED_MAX = process.env.ZDARMA_PROBE_SHARED_MAX ? Number(process.env.ZDARMA_PROBE_SHARED_MAX) : 2; // dotazů kontroly na jednoho takového poskytovatele za kolo
 
 const PREFIX = 'z-';
 const COMBO = 'zdarma-';
@@ -160,6 +163,8 @@ const HANG_MEMO_MS = 7 * 24 * 3600 * 1000;
 const hangDeadMs = (n) => Math.min(HANG_MEMO_MS, HANG_WINDOW_MS * 6 ** (n - 2));
 const LIMITED_MIN = 4; // pokusů za SPEED_WINDOW_MS, než se model počítá jako „limit vyčerpaný“
 const LIMITED_SHARE = 0.75; // podíl odpovědí 429
+const LIMIT_REPROBE_MS = Number(process.env.ZDARMA_LIMIT_REPROBE_MS ?? 10 * 60 * 1000); // model v limitu kontrola zkusí znovu po 10 min
+const LIMIT_PROBE_MAX = Number(process.env.ZDARMA_LIMIT_PROBE_MAX ?? 6); // nejvýš tolik modelů v limitu na jedno kolo kontroly
 // „Pomalý“ podle mediánu jen z aspoň tolika úspěšných pokusů: jeden 45s úspěch z dvou nesmí model přehodit
 // (14. 11.: glm-4.7-flash měnil stav každé 2 min podle toho, který řádek zrovna spadl do 500 posledních).
 const SLOW_MIN_SAMPLES = 3;
@@ -914,7 +919,7 @@ class OmniRoute {
       // 0 = „No HTTP response observed“ (prohraný závod, zrušený dotaz) → selhání jen s měřicím přepínačem
       else if (status === 499 || status >= 500 || [401, 402, 403, 404].includes(status) || (probeFailOnZero() && status === 0)) { this.failAt.set(this.matchKey(key), Math.max(this.failAt.get(this.matchKey(key)) || 0, t)); if (!up) diag.failPairs = (diag.failPairs || 0) + 1; }
       s.n++;
-      if (status === 429) s.n429++;
+      if (status === 429) { s.n429++; s.last429 = Math.max(s.last429 || 0, t); }
       if (status >= 200 && status < 300) s.okMs.push(Number(r.duration) || 0);
       // 401/402/403/404 = trvale nedostupný pro tenhle účet (NVIDIA Kimi „404 for account“, HF „402 kredity“):
       // jinak by se zkoušel na začátku každého požadavku. 429 je dočasný limit, ten se nepočítá.
@@ -926,12 +931,20 @@ class OmniRoute {
     // Codestral 45/53 × 429, Gemma 35/35 → každý krok agenta je zkoušel první a když Codestral
     // výjimečně prošel, model se uprostřed úkolu měnil (Kilo → Codestral → OVH → Kilo…).
     this.limited = new Set();
+    this.limitedAt = new Map(); // klíč → poslední 429 (kontrola zdraví zkusí model v limitu znovu po LIMIT_REPROBE_MS)
     for (const [key, s] of per) {
       const sorted = s.okMs.slice().sort((a, b) => a - b);
       const medianMs = sorted.length ? sorted[Math.floor((sorted.length - 1) / 2)] : null;
       const slowByMedian = s.okMs.length >= SLOW_MIN_SAMPLES && medianMs > SLOW_MS;
       if (slowByMedian || (s.bad >= 2 && s.bad / s.n >= 0.5)) slow.set(key, { medianMs, bad: s.bad, n: s.n });
-      else if (s.n >= LIMITED_MIN && s.n429 / s.n >= LIMITED_SHARE) this.limited.add(this.matchKey(key));
+      else if (s.n >= LIMITED_MIN && s.n429 / s.n >= LIMITED_SHARE) {
+        // obnovený limit: novější úspěch (kontrola zdraví nebo krok agenta) než poslední 429 → už ne „limit“.
+        // 26. 11.: Kilo ERNIE odpovídal 200 za 0,85 s a byl dál v „limitu“ (14. místo) – okno 2 h, nikdo ho nezkusil.
+        const mk = this.matchKey(key);
+        if ((this.okAt.get(mk) || this.okAt.get(key) || 0) > (s.last429 || 0)) continue;
+        this.limited.add(mk);
+        this.limitedAt.set(mk, Math.max(this.limitedAt.get(mk) || 0, s.last429 || 0));
+      }
     }
     this.flaky = new Set();
     this.flakyInfo = new Map();
@@ -1177,11 +1190,30 @@ class OmniRoute {
     const skipMax = Number(process.env.ZDARMA_PROBE_SKIP_MAX ?? PROBE_SKIP_MAX);
     const nowGate = Date.now();
     let skipped = 0;
+    // Ve třídě (30 instalací na jedné IP) by kontroly samy vyčerpaly sdílený limit poskytovatelů bez klíče (26. 11.: až 7
+    // dotazů na Kilo za kolo × 30 = víc než 200/h). Proto nejvýš PROBE_SHARED_MAX na takového poskytovatele za kolo.
+    const sharedUsed = new Map();
+    const sharedFull = (x) => IP_SHARED.has(x.provider) && (sharedUsed.get(x.provider) || 0) >= PROBE_SHARED_MAX;
+    const takeShared = (x) => { if (IP_SHARED.has(x.provider)) sharedUsed.set(x.provider, (sharedUsed.get(x.provider) || 0) + 1); };
+    // (napřed, aby jim strop sdílené IP nezabraly modely z čela – návrat špičkového modelu má přednost)
+    // Modely v limitu stojí za fungujícími, takže je kontrola čela nezkouší a nový úspěch, který by limit zrušil, nemá
+    // odkud přijít (okno 2 h). Proto i ty, jejichž poslední 429 je starší než LIMIT_REPROBE_MS (hodinové limity se
+    // obnovují dřív), nejvýš LIMIT_PROBE_MAX na kolo.
+    let limitRetry = 0;
+    for (const name of combos) {
+      for (const x of this.baseLists.get(name) || []) {
+        if (limitRetry >= LIMIT_PROBE_MAX || refs.has(x.ref) || this.isPaused(x) || sharedFull(x)) continue;
+        const mk = this.matchKey(`${x.provider}/${x.id}`);
+        const at = this.limitedAt?.get(mk);
+        if (!this.limited?.has(mk) || !at || nowGate - at < LIMIT_REPROBE_MS) continue;
+        refs.set(x.ref, x); limitRetry++; takeShared(x);
+      }
+    }
     for (const name of combos) {
       const base = this.baseLists.get(name);
       if (!base?.length) continue;
       for (const x of this.arrange(base).filter((y) => !this.isPaused(y)).slice(0, k)) {
-        if (refs.has(x.ref)) continue;
+        if (refs.has(x.ref) || sharedFull(x)) continue;
         const kk = `${x.provider}/${x.id}`;
         if (freshMs > 0) {
           const alt = this.matchKey(kk);
@@ -1192,7 +1224,7 @@ class OmniRoute {
           if (ok && nowGate - ok < freshMs && fail <= ok && streak <= skipMax) { this.skipStreak.set(kk, streak); skipped++; continue; }
           this.skipStreak.set(kk, 0);
         }
-        refs.set(x.ref, x);
+        refs.set(x.ref, x); takeShared(x);
       }
     }
     if (!refs.size) {
@@ -1210,7 +1242,7 @@ class OmniRoute {
       const x = refs.get(ref);
       if (x) {
         const kk = `${x.provider}/${x.id}`;
-        if (r.status === 200) { this.okAt.set(kk, Date.now()); this.skipStreak.set(kk, 0); } else this.failAt.set(kk, Date.now());
+        if (r.status === 200) { this.okAt.set(kk, Date.now()); this.skipStreak.set(kk, 0); const mk = this.matchKey(kk); if (this.limited?.delete(mk)) this.limitedAt?.delete(mk); } else this.failAt.set(kk, Date.now());
       }
     }), concurrency).catch(() => {});
     const bad = Object.entries(results).filter(([, s]) => s !== 200);

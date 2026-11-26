@@ -42,6 +42,8 @@ const { findOpencode, serveEnv } = require('../src/opencodeServer');
 
   // přibalené skills (zkrácené popisy) do skills složky konfigurace
   const skills = require('../src/skills');
+  // izolace: test nesmí záviset na skutečných ~/.claude/skills (jinak se přibalené skills, co tam uživatel má, nezkopírují)
+  process.env.ZDARMA_CLAUDE_SKILLS = path.join(env.XDG_CONFIG_HOME, 'claude-skills-empty');
   skills.sync({ bundleDir: path.join(__dirname, '..', 'skills'), targetDir: path.join(env.XDG_CONFIG_HOME, 'opencode', 'skills'), version: 'test' });
 
   const proj = x('proj'); env.PWD = proj;

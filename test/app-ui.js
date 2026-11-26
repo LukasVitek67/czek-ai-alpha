@@ -86,7 +86,8 @@ const shots = process.env.UI_SHOTS || path.join(os.tmpdir(), 'zd-ui-shots');
     // panel Kontext: otevřít (tlačítko/záložka „Context“ nebo kroužek využití) a přečíst součty czek-ai
     let totals = null;
     for (let i = 0; i < 12 && !totals; i++) {
-      await ev(`(() => { const c = [...document.querySelectorAll('button,[role=tab]')].find(b => /^\\s*(Context|Kontext)\\s*$/i.test(b.innerText) || /context/i.test(b.getAttribute('aria-label') || '')); if (c) c.click(); return !!c; })()`);
+      // česká verze OpenCode má u kroužku využití popisek „…kontextu“ (s k) → hledat obě varianty
+      await ev(`(() => { const c = [...document.querySelectorAll('button,[role=tab]')].find(b => /^\\s*(Context|Kontext)\\s*$/i.test(b.innerText) || /(con|kon)text/i.test(b.getAttribute('aria-label') || '')); if (c) c.click(); return c ? (c.getAttribute('aria-label') || c.innerText) : null; })()`);
       await wait(2500);
       totals = await ev(`document.querySelector('[data-czek-totals]')?.innerText || null`);
     }

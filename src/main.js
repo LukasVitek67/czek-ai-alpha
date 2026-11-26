@@ -384,6 +384,9 @@ async function startOmni() {
       log: (l) => logLine('[omniroute]', l),
       onExit: () => omniCrashed(eng),
     });
+    // seznamy modelů od poskytovatelů na OmniRoute nezávisí → stahovat souběžně s jeho startem (~8 s), sync je převezme
+    // (ModelRegistry.list sdílí rozběhnuté stahování). 26. 11.: 2. start čekal 2,5 s na registry.list až po startu OmniRoute.
+    registry.list().catch(() => {});
     try {
       await eng.start();
       lastOmniPort = eng.port;
@@ -811,6 +814,7 @@ async function syncOpencodeConfig(so = {}) {
         todo: settings.ocTodo === true,
         reviewer: settings.ocReviewer !== false, // kontroloví subagenti reviewer a reviewer-alt (výchozí zapnuto)
         caveman: settings.caveman !== false, // skill caveman trvale zapnutý (vypíná se v menu)
+        presets: settings.presets !== false, // presety chatu: agenti + plán a skills přes czek-guard (vypíná se v menu)
         cavemanSkill: path.join(SKILLS_BUNDLE(), 'caveman', 'SKILL.md'),
         methodSkill: path.join(SKILLS_BUNDLE(), 'czek-method', 'SKILL.md'), // postup práce + směrovač skills, trvale
         sysInfo: settings.sysContext !== false ? sysInfo() : null,
@@ -827,6 +831,7 @@ async function syncOpencodeConfig(so = {}) {
     reviewer: settings.ocReviewer !== false, // kontroloví subagenti reviewer a reviewer-alt (výchozí zapnuto)
     migrateDefault: !settings.ocDefaultMaxDone, // jednou: dřívější výchozí High → Max
     fullAuto: settings.ocFullAuto === true,
+    presets: settings.presets !== false,
     sysInfo: settings.sysContext !== false ? sysInfo() : null,
     settings,
     registry,
@@ -897,6 +902,11 @@ function opencodeMenu() {
           // pokyny se čtou při startu serveru OpenCode → zápis + restart, až nic neběží (refreshOpencodeModels)
           label: I18N.t('menu.caveman'), type: 'checkbox', checked: settings.caveman !== false,
           click: (item) => { settings.caveman = item.checked; saveSettings(); logLine('[opencode] caveman', item.checked ? 'zapnutý' : 'vypnutý'); refreshOpencodeModels().catch(() => {}); },
+        },
+        {
+          // agenti presetů jsou v konfiguraci OpenCode → zápis + restart serveru, až nic neběží (jako caveman)
+          label: I18N.t('menu.presets'), type: 'checkbox', checked: settings.presets !== false,
+          click: (item) => { settings.presets = item.checked; saveSettings(); logLine('[opencode] presety chatu', item.checked ? 'zapnuté' : 'vypnuté'); refreshOpencodeModels().catch(() => {}); },
         },
         {
           // živě: proxy čte raceN() u každého dotazu
@@ -1432,9 +1442,17 @@ ipcMain.on('oc:prefs', (e) => {
       strings,
       modelPopupWidth: Number(settings.modelPopupWidth) || 680,
       modelPopupHeight: Number(settings.modelPopupHeight) || 560,
+      presets: settings.presets !== false ? uiPresets() : [],
     }
     : {};
 });
+// Presety chatu pro výběr v nové relaci (src/presets): jen ty s plánem (= agent v konfiguraci OpenCode) + obecný chat
+function uiPresets() {
+  try {
+    return opencode.presetsData(I18N.lang).filter((p) => p.plan || p.agent === 'build')
+      .map((p) => ({ id: p.id, agent: p.agent, color: p.color, name: p.name, tag: p.tag, desc: p.desc, skills: p.plan ? p.skills.length : 0 }));
+  } catch { return []; }
+}
 // web OpenCode hlásí prázdný výběr modelu („No model results“ bez hledání) → hlídač hned, s reakcí
 let uiNoModelsAt = 0;
 ipcMain.on('oc:noModels', (e) => {
@@ -1447,7 +1465,14 @@ ipcMain.on('oc:noModels', (e) => {
 // Novější sestavení na ploše (czek-ai-X.Y.Z.exe vedle běžící czek-ai.exe) → lišta v okně OpenCode s restartem.
 const upgrade = require('./upgrade');
 const DESKTOP_DIR = () => process.env.CZEK_DESKTOP_DIR || app.getPath('desktop');
+// Dev verze z klonu soukromého repa (tools/dev-install.js): nové commity si stahuje sama (src/devUpdate.js),
+// kód použije při startu; za běhu stejná lišta s restartem místo „novější exe na ploše“.
+const devUpdate = require('./devUpdate');
+const DEV_DIR = app.isPackaged ? null : devUpdate.devRoot(path.join(__dirname, '..'));
+let devPending = null;
+const devArgs = () => process.argv.slice(1).filter((a) => a !== '--dev-updated');
 ipcMain.handle('app:update', () => {
+  if (DEV_DIR) return devPending ? { dev: true, current: devPending.head, version: devPending.up, subject: devPending.subject.slice(0, 80) } : null;
   // nainstalovaná verze (instalátor czek-ai-X.Y.Z-setup.exe) se aktualizuje novým instalátorem, ne výměnou exe
   if (app.isPackaged && !process.env.PORTABLE_EXECUTABLE_FILE) return null;
   const nb = upgrade.newerBuild(DESKTOP_DIR(), VERSION);
@@ -1455,6 +1480,13 @@ ipcMain.handle('app:update', () => {
 });
 ipcMain.handle('app:upgrade', (e) => {
   if (!ocWin || ocWin.isDestroyed() || e.sender !== ocWin.webContents) return false;
+  if (DEV_DIR) {
+    if (!devPending) return false;
+    logLine('[dev] restart do nové verze', devPending.up, devPending.subject);
+    app.relaunch({ args: devArgs() }); // nové spuštění samo sloučí (devUpdate.startup)
+    setTimeout(() => app.quit(), 300);
+    return true;
+  }
   const nb = upgrade.newerBuild(DESKTOP_DIR(), VERSION);
   // spuštěná přenosná exe (electron-builder portable); nová jde vždy na czek-ai.exe (viz upgradeTarget)
   const { to: target, old } = upgrade.upgradeTarget(process.env.PORTABLE_EXECUTABLE_FILE);
@@ -2455,6 +2487,31 @@ async function openMain() {
 // Jedna instance na profil: druhé spuštění jen přepne do už otevřeného okna.
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) app.exit(0);
+// Linux + Wayland: kompozitor občas Electronu vůbec neodpoví – Electron po skončení main.js zablokuje hlavní vlákno a `ready`
+// nepřijde (26. 11. na Ubuntu 26.04: holý Electron na Waylandu visel, s --ozone-platform=x11 / headless naběhl hned) → uživatel
+// spustí czek-ai a nestane se nic. Časovač uvnitř procesu nepomůže (smyčka událostí stojí, přepínač ozone po startu je pozdě),
+// proto hlídač mimo proces: odpojený malý Node (stejná binárka, ELECTRON_RUN_AS_NODE) počká 15 s na značku `ready`; když
+// nepřijde, zablokovaný proces ukončí a spustí appku znovu přes X11 (XWayland). AppImage: znovu celý soubor (APPIMAGE).
+// CZEK_NO_X11_FALLBACK=1 vypne, CZEK_X11_FALLBACK_MS = čekání.
+const X11_WATCHDOG = `const fs=require('fs'),{spawn}=require('child_process');const e=process.env;
+setTimeout(()=>{try{if(fs.existsSync(e.CZEK_WD_MARKER)){fs.unlinkSync(e.CZEK_WD_MARKER);return}process.kill(+e.CZEK_WD_PID,0)}catch{return}
+try{fs.appendFileSync(e.CZEK_WD_LOG,new Date().toISOString()+' [app] Wayland neodpověděl do '+e.CZEK_WD_MS+' ms → nový start přes X11\\n')}catch{}
+try{process.kill(+e.CZEK_WD_PID,'SIGKILL')}catch{}const env={...e};for(const k of Object.keys(env))if(/^(CZEK_WD_|ELECTRON_RUN_AS_NODE)/.test(k))delete env[k];
+setTimeout(()=>{spawn(e.CZEK_WD_EXEC,[...JSON.parse(e.CZEK_WD_ARGS),'--ozone-platform=x11'],{detached:true,stdio:'ignore',env}).unref();process.exit(0)},1000)},+e.CZEK_WD_MS);`;
+if (gotLock && process.platform === 'linux' && process.env.WAYLAND_DISPLAY && !process.env.CZEK_NO_X11_FALLBACK
+  && !process.argv.some((a) => /^--ozone-platform=/.test(a))) {
+  try {
+    const marker = path.join(require('os').tmpdir(), `czek-ready-${process.pid}`);
+    const ms = Number(process.env.CZEK_X11_FALLBACK_MS) || 15000;
+    require('child_process').spawn(process.execPath, ['-e', X11_WATCHDOG], {
+      detached: true, stdio: 'ignore',
+      env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', CZEK_WD_PID: String(process.pid), CZEK_WD_MARKER: marker, CZEK_WD_MS: String(ms),
+        CZEK_WD_LOG: path.join(app.getPath('userData'), 'zdarma.log'), CZEK_WD_EXEC: process.env.APPIMAGE || process.execPath,
+        CZEK_WD_ARGS: JSON.stringify(process.argv.slice(1)) },
+    }).unref();
+    app.whenReady().then(() => { try { fs.writeFileSync(marker, '1'); } catch {} });
+  } catch {}
+}
 app.on('second-instance', (_e, argv) => {
   if (argv.includes('--proxy')) return;
   // Okno vytvořené přímo uvnitř této události v zabalené appce hned po startu spadlo (renderer
@@ -2478,6 +2535,17 @@ process.on('unhandledRejection', (e) => { try { logLine('[app] nezachycené odm�
 app.whenReady().then(async () => {
   if (!gotLock) return;
   logLine('[app] start', VERSION, process.execPath);
+  if (DEV_DIR) {
+    if (!process.argv.includes('--dev-updated')) {
+      const logs = path.join(app.getPath('userData'), 'logs');
+      try { fs.mkdirSync(logs, { recursive: true }); } catch {}
+      const r = await devUpdate.startup(DEV_DIR, { log: logLine,
+        helper: process.platform === 'win32' ? { pid: process.pid, exe: process.execPath, args: devArgs(), log: path.join(logs, 'dev-update.log') } : null });
+      if (r === 'relaunch') { app.relaunch({ args: [...devArgs(), '--dev-updated'] }); app.exit(0); return; }
+      if (r === 'helper') { app.exit(0); return; }
+    }
+    logLine('[dev] verze ze zdrojáků', (await devUpdate.git(DEV_DIR, ['rev-parse', '--short', 'HEAD'])).out, DEV_DIR);
+  }
   loadSettings();
   setLocalToolDirs();
   // Příkazová řádka (pro Clauda / skripty, bez okna): --keys-file=<cesta> uloží cestu, --export-keys=<soubor>
@@ -2571,6 +2639,12 @@ app.whenReady().then(async () => {
     logLine('[průvodce] po otevření okna OpenCode přenesen dopředu');
   }
   startPublicTier();
+  if (DEV_DIR) {
+    const tick = async () => { try { devPending = await devUpdate.poll(DEV_DIR, { log: logLine }); } catch (e) { logLine('[dev] kontrola selhala', e.message); } };
+    const every = Number(process.env.CZEK_DEV_POLL_MS) || 10 * 60e3;
+    setTimeout(tick, Math.min(60e3, every));
+    setInterval(tick, every);
+  }
   // Staré rozbalené kopie přenosné verze v %TEMP% (0,7 GB každá) – jen u zabaleného exe, chvíli po startu.
   if (app.isPackaged && process.env.PORTABLE_EXECUTABLE_FILE) {
     setTimeout(() => {

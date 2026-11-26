@@ -7,6 +7,7 @@ import { autoCheck } from './autocheck.mjs';
 import { searchTools, loadPluginApi, findRg } from './search.mjs';
 import { lookTool } from './look.mjs';
 import { backgroundize, releaseLocks, pruneLogs, findLaunch } from './launch.mjs';
+import { loadPresets, presetBlock, isTitleRequest } from './presets.mjs';
 
 // Úplný log czek-ai: každé rozhodnutí guardu (blok, přepis příkazu, poznámka modelu, kontrola po editu,
 // zastavení opakování, zkrácení kontextu) jako JSON řádek do souboru z CZEK_GUARD_LOG (nastaví czek-ai).
@@ -81,6 +82,9 @@ export const CzekGuard = async (ctx, options) => {
   const REFUSE = /neud[eě]l[aá]m|nem[uů][zž]u|nemohu|nepom[uů][zž]u|can'?t help|cannot|won'?t|i'?m (not able|unable)|unable to/i;
   const PROMISED_TEXT = 'You answered as if the task was done (or showed code in the chat), but you did not call any tool, so nothing was created or changed in the project. Do the task now with your tools: write/edit the files and run what is needed. If you truly need something from the user first, ask one concrete question.';
   const askOf = new Map(); // sessionID → { action: zadání uživatele je úkol, tool: v tomto kole proběhl nástroj, sent }
+  // Presety chatu (presets.mjs): agent zprávy uživatele → plán + skills presetu do systémového promptu relace.
+  const presets = opts.presets === false ? {} : loadPresets(opts.presetsFile); // presetsFile jen pro testy
+  const presetOf = new Map(); // sessionID → agent presetu
   const autoContinue = (id, la, why = 'length') => {
     if (!la.providerID || !la.modelID) return;
     const now = Date.now();
@@ -145,6 +149,22 @@ export const CzekGuard = async (ctx, options) => {
         if (said && !said.startsWith('You answered as if') && !/^(Your previous reply|The model stopped|The project still)/.test(said)) askOf.set(input.sessionID, { action: ACTION_ASK.test(said), tool: false, sent: false });
         if (askOf.size > 200) askOf.delete(askOf.keys().next().value);
       }
+      // preset relace = agent zprávy uživatele (přepnutí na jiného agenta, např. build, preset vypne)
+      if (input?.sessionID && input?.agent) {
+        const p = presets[input.agent];
+        if (p) {
+          if (presetOf.get(input.sessionID) !== input.agent) glog('preset', `relace ${input.sessionID}: preset ${p.name} (${p.skills.length} skills)`, { session: input.sessionID, preset: p.id });
+          presetOf.set(input.sessionID, input.agent);
+          if (presetOf.size > 200) presetOf.delete(presetOf.keys().next().value);
+        } else presetOf.delete(input.sessionID);
+      }
+    },
+    // preset relace: povinné skills + plán postupu na konec systémového promptu (titulek relace ne)
+    'experimental.chat.system.transform': async (input, output) => {
+      const a = input?.sessionID ? presetOf.get(input.sessionID) : null;
+      const p = a ? presets[a] : null;
+      if (!p || !Array.isArray(output?.system) || isTitleRequest(output.system)) return;
+      output.system.push(presetBlock(p));
     },
     'tool.execute.before': async (input, output) => {
       pending.set(input.callID, output.args);

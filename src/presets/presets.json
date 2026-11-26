@@ -1,0 +1,213 @@
+{
+  "version": 1,
+  "note": "Presety chatu (uživatel 26. 11.: na začátku nového chatu výběr presetu; preset = specifické skills + plán postupu). Plány v <id>.md generuje silný model přes tools/presets-generate.js. Agent = primární agent OpenCode bez vlastního promptu (základní prompt zůstává); plán a skills přidá czek-guard do systémového promptu relace.",
+  "presets": [
+    {
+      "id": "web-design",
+      "agent": "web-design",
+      "color": "#C8552B",
+      "icon": "layout",
+      "name": {
+        "cs": "Web design",
+        "en": "Web design"
+      },
+      "tag": {
+        "cs": "Landing page, portfolio",
+        "en": "Landing page, portfolio"
+      },
+      "desc": {
+        "cs": "Landing page, portfolio, web firmy. Výrazný vzhled, typografie, animace.",
+        "en": "Landing page, portfolio, company site. Distinct look, typography, motion."
+      },
+      "skills": [
+        "czek-frontend",
+        "modern-web-design",
+        "ui-ux-pro-max",
+        "impeccable",
+        "unslop-ui",
+        "gsap-scrolltrigger",
+        "scroll-reveal-libraries"
+      ],
+      "goal": "Design and build distinctive, polished marketing websites (landing pages, portfolios, company presentations): a strong visual identity, deliberate typography and spacing, responsive layout from phone to desktop, tasteful motion, accessibility and fast loading. The result must not look like a generic AI-generated template.",
+      "extra": "Design must follow the loaded design skills (impeccable, unslop-ui): no gradients, no glassmorphism, no emoji used as icons, no generic template look; a single static page can be plain HTML, CSS and a little JS."
+    },
+    {
+      "id": "web-app",
+      "agent": "web-app",
+      "color": "#2D6BE0",
+      "icon": "app",
+      "name": {
+        "cs": "Webová aplikace",
+        "en": "Web app"
+      },
+      "tag": {
+        "cs": "Formuláře, data, přihlášení",
+        "en": "Forms, data, sign-in"
+      },
+      "desc": {
+        "cs": "Interaktivní appka v prohlížeči: formuláře, data, přihlášení, React/Vue.",
+        "en": "Interactive browser app: forms, data, sign-in, React/Vue."
+      },
+      "skills": [
+        "czek-frontend",
+        "czek-new-project",
+        "impeccable",
+        "ui-ux-pro-max",
+        "czek-testing",
+        "czek-security",
+        "czek-review"
+      ],
+      "goal": "Build interactive web applications (React, Vue, Svelte or plain JS): clear component structure, state management, forms with validation, data fetching, authentication flows, loading, error and empty states, and tests for the important logic.",
+      "extra": "Use the existing project stack if there is one; for a new small app a minimal setup is fine (for example Vite with the framework the user mentions, or plain JS)."
+    },
+    {
+      "id": "backend",
+      "agent": "backend",
+      "color": "#2A8A5C",
+      "icon": "server",
+      "name": {
+        "cs": "Backend a API",
+        "en": "Backend & API"
+      },
+      "tag": {
+        "cs": "Server, API, databáze",
+        "en": "Server, API, database"
+      },
+      "desc": {
+        "cs": "Server, REST API, databáze, přihlašování, skripty na pozadí.",
+        "en": "Server, REST API, database, auth, background jobs."
+      },
+      "skills": [
+        "czek-security",
+        "czek-testing",
+        "czek-research",
+        "czek-performance",
+        "czek-review"
+      ],
+      "goal": "Build reliable backend services: HTTP/REST APIs, databases and migrations, authentication and authorization, input validation, consistent error handling and logging, automated tests, and safe handling of secrets and configuration."
+    },
+    {
+      "id": "bugfix",
+      "agent": "bugfix",
+      "color": "#C2362F",
+      "icon": "bug",
+      "name": {
+        "cs": "Oprava chyby",
+        "en": "Fix a bug"
+      },
+      "tag": {
+        "cs": "Padá, hází chybu, nejede",
+        "en": "Crashes, errors, won't run"
+      },
+      "desc": {
+        "cs": "Něco nefunguje, padá, hází chybu nebo nejde spustit.",
+        "en": "Something is broken, crashes, throws or won't start."
+      },
+      "skills": [
+        "czek-debugging",
+        "app-debugging",
+        "czek-testing",
+        "czek-review"
+      ],
+      "goal": "Find and fix bugs reliably: reproduce the problem first, read the complete error, locate the root cause instead of patching symptoms, make the smallest correct fix, add a regression test, and confirm the original symptom is gone."
+    },
+    {
+      "id": "game-3d",
+      "agent": "game-3d",
+      "color": "#C98A14",
+      "icon": "cube",
+      "name": {
+        "cs": "Hra a 3D",
+        "en": "Game & 3D"
+      },
+      "tag": {
+        "cs": "Hra, 3D scéna, canvas",
+        "en": "Game, 3D scene, canvas"
+      },
+      "desc": {
+        "cs": "Hra v prohlížeči, 3D scéna, canvas, fyzika, animace.",
+        "en": "Browser game, 3D scene, canvas, physics, animation."
+      },
+      "skills": [
+        "threejs-webgl",
+        "react-three-fiber",
+        "pixijs-2d",
+        "lightweight-3d-effects",
+        "babylonjs-engine",
+        "czek-performance"
+      ],
+      "goal": "Build browser games and 2D/3D graphics: a game loop, input handling, rendering with Three.js or PixiJS (or Babylon.js), assets, simple physics and collisions, smooth 60 fps performance, and something playable as early as possible.",
+      "extra": "Make something playable within the first steps; a small game can be plain JavaScript with canvas or a library loaded from a CDN, no build step required."
+    },
+    {
+      "id": "school",
+      "agent": "school",
+      "color": "#0F8584",
+      "icon": "book",
+      "name": {
+        "cs": "Školní projekt",
+        "en": "School project"
+      },
+      "tag": {
+        "cs": "Do školy, krok za krokem",
+        "en": "Homework, step by step"
+      },
+      "desc": {
+        "cs": "Úkol do školy: jednoduchý čitelný kód a vysvětlení krok za krokem.",
+        "en": "School assignment: simple readable code, explained step by step."
+      },
+      "skills": [
+        "czek-new-project",
+        "czek-testing",
+        "czek-review"
+      ],
+      "goal": "Help a student finish a school programming assignment: understand exactly what the assignment asks, write simple readable code the student can explain to a teacher, short comments, explain each step in plain words in the user's language, run and test it, and never over-engineer or use advanced tricks the student would not understand.",
+      "extra": "Explain in the user's language (usually Czech) and keep the code at a level a secondary-school student can read and explain; no advanced patterns the assignment does not need."
+    },
+    {
+      "id": "refactor",
+      "agent": "refactor",
+      "color": "#5A6878",
+      "icon": "broom",
+      "name": {
+        "cs": "Úklid a zrychlení",
+        "en": "Refactor & speed up"
+      },
+      "tag": {
+        "cs": "Uklidit a zrychlit kód",
+        "en": "Clean up and speed up"
+      },
+      "desc": {
+        "cs": "Uklidit, přepsat nebo zrychlit existující kód beze změny chování.",
+        "en": "Clean up, restructure or speed up existing code, same behavior."
+      },
+      "skills": [
+        "czek-refactor",
+        "czek-performance",
+        "czek-testing",
+        "czek-review"
+      ],
+      "goal": "Improve existing code without changing its behavior: first make sure tests cover what will change (add them if missing), refactor in small verified steps, measure before and after for any performance work, and keep the public interface stable."
+    },
+    {
+      "id": "general",
+      "agent": "build",
+      "color": "#8A8F98",
+      "icon": "chat",
+      "name": {
+        "cs": "Obecný chat",
+        "en": "General chat"
+      },
+      "tag": {
+        "cs": "Běžný režim bez presetu",
+        "en": "Normal mode, no preset"
+      },
+      "desc": {
+        "cs": "Bez presetu – běžný režim, skills vybere agent sám.",
+        "en": "No preset – normal mode, the agent picks skills itself."
+      },
+      "skills": [],
+      "goal": null
+    }
+  ]
+}

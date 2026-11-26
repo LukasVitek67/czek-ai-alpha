@@ -477,7 +477,7 @@ function installGuard() {
   const src = path.join(__dirname, 'guard');
   const dst = GUARD_DIR();
   fs.mkdirSync(dst, { recursive: true });
-  for (const f of ['index.mjs', 'guard-core.mjs', 'autocheck.mjs', 'search.mjs', 'launch.mjs', 'look.mjs', 'look.ps1']) {
+  for (const f of ['index.mjs', 'guard-core.mjs', 'autocheck.mjs', 'search.mjs', 'launch.mjs', 'look.mjs', 'look.ps1', 'presets.mjs']) {
     const body = fs.readFileSync(path.join(src, f), 'utf8');
     let cur = null;
     try { cur = fs.readFileSync(path.join(dst, f), 'utf8'); } catch {}
@@ -553,6 +553,45 @@ function applyGuard(cfg, on) {
   const list = Array.isArray(cfg.plugin) ? cfg.plugin.filter((p) => !isGuard(p)) : [];
   if (on) list.push(installGuard());
   if (list.length) cfg.plugin = list; else delete cfg.plugin;
+}
+
+// Presety chatu (src/presets, uživatel 26. 11.: na začátku chatu výběr presetu, preset = specifické skills + plán
+// postupu). Každý preset = primární agent OpenCode BEZ vlastního promptu (vlastní prompt by nahradil základní prompt
+// OpenCode a model by hůř zacházel s nástroji) → je i v nativním výběru agenta. Plán a povinné skills přidá do
+// systémového promptu relace czek-guard (src/guard/presets.mjs) z presets.json vedle pluginu. Naše agenty poznáme
+// podle začátku popisu; agenta uživatele se stejným jménem nepřepíšeme.
+const PRESET_MARK = 'czek-ai preset:';
+const PRESETS_DIR = path.join(__dirname, 'presets');
+/** Presety ze src/presets: jméno/popis v jazyce lang, plán z <id>.md bez úvodního komentáře generátoru (null = bez plánu). */
+function presetsData(lang = 'cs') {
+  let spec;
+  try { spec = JSON.parse(fs.readFileSync(path.join(PRESETS_DIR, 'presets.json'), 'utf8')); } catch { return []; }
+  const t = (o, id) => (o && (o[lang] || o.cs || o.en)) || id;
+  return (Array.isArray(spec.presets) ? spec.presets : []).filter((p) => p && /^[a-z0-9-]+$/.test(p.id || '') && /^[a-z0-9-]+$/.test(p.agent || '')).map((p) => {
+    let plan = null;
+    if (p.goal) { try { plan = fs.readFileSync(path.join(PRESETS_DIR, p.id + '.md'), 'utf8').replace(/^\s*<!--[\s\S]*?-->\s*/, '').trim() || null; } catch {} }
+    return { id: p.id, agent: p.agent, color: p.color || null, icon: p.icon || null, name: t(p.name, p.id), tag: t(p.tag, ''), desc: t(p.desc, ''), nameEn: p.name?.en || p.id, descEn: p.desc?.en || '', skills: Array.isArray(p.skills) ? p.skills : [], plan };
+  });
+}
+/** Zapíše primární agenty presetů a presets.json pro guard; available = povolené skills (Set) nebo null. Vrátí agenty. */
+function applyPresets(cfg, on, available = null) {
+  const agents = cfg.agent && typeof cfg.agent === 'object' ? { ...cfg.agent } : {};
+  for (const [k, v] of Object.entries(agents)) if (typeof v?.description === 'string' && v.description.startsWith(PRESET_MARK)) delete agents[k];
+  const data = {};
+  if (on) {
+    for (const p of presetsData('en')) {
+      if (!p.plan || p.agent === 'build' || p.agent === 'plan' || agents[p.agent]) continue;
+      agents[p.agent] = { mode: 'primary', description: `${PRESET_MARK} ${p.nameEn} – ${p.descEn}` };
+      data[p.agent] = { id: p.id, name: p.nameEn, skills: available ? p.skills.filter((s) => available.has(s)) : p.skills, plan: p.plan };
+    }
+  }
+  if (Object.keys(agents).length) cfg.agent = agents; else delete cfg.agent;
+  const file = path.join(GUARD_DIR(), 'presets.json');
+  try {
+    if (Object.keys(data).length) { fs.mkdirSync(GUARD_DIR(), { recursive: true }); fs.writeFileSync(file, JSON.stringify({ agents: data }, null, 2) + '\n'); }
+    else fs.rmSync(file, { force: true });
+  } catch {}
+  return Object.keys(data);
 }
 
 /**
@@ -654,6 +693,8 @@ function writeConfig(port, models, o = {}) {
   applySkills(cfg, o.skillsAllow);
   applySnapshot(cfg, o.snapshotOff ?? !!homeInGit());
   applyGuard(cfg, o.guard !== false);
+  // presety jen s guardem (plán a skills do promptu přidává on); o.presets === false = vypnuto
+  applyPresets(cfg, o.guard !== false && o.presets !== false, Array.isArray(o.skillsAllow) ? new Set(o.skillsAllow) : null);
   applyDcp(cfg, o.dcp !== false);
   applyTodo(cfg, o.todo === true);
   // Pokyny pro agenta (soubor vedle konfigurace, cesta v "instructions"); o.agentTips === false = vypnuto
@@ -728,4 +769,4 @@ function isConfigured(port, omniUrl) {
   } catch { return false; }
 }
 
-module.exports = { AUTO_CONTEXT, COMBO_OUTPUT, DEFAULT_MODEL, SMALL_MODEL, writeConfig, isConfigured, installOmniPlugin, writeOmniAuth, clearOmniPluginCache, providerBlock, modelEntries, tierEntries, unitedEntries, leanVisible, provenModelKeys, CONFIG_FILE, AUTH_FILE, PLUGIN_DIR, FULL_AUTO, PERM_BACKUP, homeInGit, SNAP_MARK, AGENT_TIPS, AGENT_TIPS_FILE, GUARD_DIR, ROUTED_FILE, CAVEMAN_FILE, cavemanInstructions, METHOD_FILE, methodInstructions, SYSTEM_FILE, systemContext };
+module.exports = { PRESET_MARK, presetsData, applyPresets, AUTO_CONTEXT, COMBO_OUTPUT, DEFAULT_MODEL, SMALL_MODEL, writeConfig, isConfigured, installOmniPlugin, writeOmniAuth, clearOmniPluginCache, providerBlock, modelEntries, tierEntries, unitedEntries, leanVisible, provenModelKeys, CONFIG_FILE, AUTH_FILE, PLUGIN_DIR, FULL_AUTO, PERM_BACKUP, homeInGit, SNAP_MARK, AGENT_TIPS, AGENT_TIPS_FILE, GUARD_DIR, ROUTED_FILE, CAVEMAN_FILE, cavemanInstructions, METHOD_FILE, methodInstructions, SYSTEM_FILE, systemContext };

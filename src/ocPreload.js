@@ -524,6 +524,10 @@ const PRESET_CSS = `
 [data-czek-presets] .cp-status{margin:10px 2px 0;min-height:16px;font-size:12px;line-height:16px;color:var(--text-base,#a0a0a0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 [data-czek-presets] .cp-status code{font-family:ui-monospace,"Cascadia Mono",Consolas,monospace;font-size:11.5px;color:var(--text-strong,#ededed)}
 [data-czek-presets] .cp-status.cp-fail{color:var(--text-strong,#ededed)}
+[data-czek-presets] .cp-add{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--text-strong,#888) 11%,transparent)}
+[data-czek-presets] .cp-add .cp-mark{background:transparent;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--text-strong,#888) 45%,transparent)}
+[data-czek-presets] .cp-add .cp-name{font-weight:400;color:var(--text-base,#a0a0a0)}
+[data-czek-presets] .cp-add:hover .cp-name{color:var(--text-strong,#ededed)}
 @media (max-height:720px){[data-czek-presets] .cp-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}[data-czek-presets] .cp-desc,[data-czek-presets] .cp-hint{display:none}[data-czek-presets] .cp-opt{grid-template-columns:8px minmax(0,1fr);height:32px}[data-czek-presets] .cp-name{overflow:hidden;text-overflow:ellipsis}}
 @media (prefers-reduced-motion:reduce){[data-czek-presets] .cp-opt{transition:none}}`;
 
@@ -550,7 +554,7 @@ function initPresetPicker() {
   function update() {
     if (!host) return;
     const cur = current() || 'build';
-    for (const b of host.querySelectorAll('.cp-opt')) { const v = String(b.dataset.agent === cur); if (b.getAttribute('aria-checked') !== v) b.setAttribute('aria-checked', v); }
+    for (const b of host.querySelectorAll('.cp-opt[data-agent]')) { const v = String(b.dataset.agent === cur); if (b.getAttribute('aria-checked') !== v) b.setAttribute('aria-checked', v); }
     const failing = Date.now() < failUntil;
     const want = failing ? 'fail' : `active:${cur}`;
     if (want === shown) return;
@@ -567,7 +571,9 @@ function initPresetPicker() {
   async function choose(agent) {
     if (busy) return;
     if (current() === agent) { failUntil = 0; update(); focusPrompt(); return; }
-    const t = trigger();
+    // po (znovu)načtení okna OpenCode tlačítko agenta v liště promptu chvíli chybí → počkat (nejvýš 4 s)
+    let t = trigger();
+    for (let i = 0; i < 40 && !t; i++) { await wait(100); t = trigger(); }
     if (!t) { fail(); return; }
     busy = true; host?.setAttribute('aria-busy', 'true');
     try {
@@ -622,6 +628,16 @@ function initPresetPicker() {
       });
       grid.append(b);
     }
+    // vlastní presety: editor (dialog) – nový preset, úprava, smazání
+    const add = el('button', 'cp-opt cp-add');
+    add.type = 'button';
+    add.style.setProperty('--c', 'var(--text-strong,#ededed)');
+    add.title = T('oc.cpAddTitle');
+    add.append(el('span', 'cp-mark'), el('span', 'cp-name', T('oc.cpAdd')), el('span', 'cp-desc', ''));
+    add.addEventListener('click', () => openPresetEditor());
+    add.addEventListener('mouseenter', () => { status.classList.remove('cp-fail'); status.textContent = T('oc.cpAddTitle'); shown = 'peek'; });
+    add.addEventListener('mouseleave', update);
+    grid.append(add);
     h.append(head, grid, status);
     return h;
   }
@@ -655,4 +671,290 @@ function initPresetPicker() {
   check();
 }
 
-window.addEventListener('DOMContentLoaded', () => { initLimits(); initActive(); initModelPopupBar(); initNoModelsWatch(); initVideoDock(); initUpgradeBar(); initPresetPicker(); });
+// ------------------------------------------------------------ Editor vlastních presetů (uživatel 26. 11.)
+// Nativní <dialog> (Esc zavře, fokus uvnitř). Uložení → main zapíše agenta my-… do konfigurace OpenCode a po restartu
+// serveru načte okno znovu, takže výběr ukáže nový preset. Plán může napsat model tieru Max (presets:generate).
+const CPE_CSS = `
+dialog[data-czek-cpe]{box-sizing:border-box;position:fixed;inset:0;margin:auto;height:fit-content;width:min(680px,94vw);max-height:88vh;padding:0;border:0;border-radius:10px;background:var(--surface-raised-base,#161616);color:var(--text-base,#a0a0a0);font:13px/1.45 Inter,ui-sans-serif,system-ui,sans-serif;box-shadow:0 0 0 .5px color-mix(in srgb,var(--text-strong,#ededed) 18%,transparent),0 24px 60px rgba(0,0,0,.45)}
+dialog[data-czek-cpe]::backdrop{background:rgba(0,0,0,.45)}
+dialog[data-czek-cpe] form{display:flex;flex-direction:column;max-height:88vh}
+dialog[data-czek-cpe] .ce-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px 10px}
+dialog[data-czek-cpe] .ce-title{font-size:14px;font-weight:500;color:var(--text-strong,#ededed)}
+dialog[data-czek-cpe] .ce-body{overflow:auto;padding:4px 18px 8px;display:grid;grid-template-columns:1fr 1fr;gap:12px 14px}
+dialog[data-czek-cpe] .ce-full{grid-column:1/-1}
+dialog[data-czek-cpe] label.ce-f{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--text-base,#a0a0a0)}
+dialog[data-czek-cpe] input[type=text],dialog[data-czek-cpe] select,dialog[data-czek-cpe] textarea{all:unset;box-sizing:border-box;width:100%;padding:7px 10px;border-radius:8px;background:color-mix(in srgb,var(--text-strong,#ededed) 4%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--text-strong,#ededed) 14%,transparent);color:var(--text-strong,#ededed);font:13px/1.45 inherit}
+dialog[data-czek-cpe] select{cursor:pointer}
+dialog[data-czek-cpe] textarea{min-height:190px;white-space:pre-wrap;font:12px/1.5 ui-monospace,"Cascadia Mono",Consolas,monospace;resize:vertical}
+dialog[data-czek-cpe] input:focus-visible,dialog[data-czek-cpe] select:focus-visible,dialog[data-czek-cpe] textarea:focus-visible{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--text-strong,#ededed) 55%,transparent)}
+dialog[data-czek-cpe] .ce-colors{display:flex;gap:8px;flex-wrap:wrap;padding:3px 1px}
+dialog[data-czek-cpe] .ce-sw{all:unset;width:22px;height:22px;border-radius:5px;background:var(--c);cursor:pointer;box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
+dialog[data-czek-cpe] .ce-sw[aria-checked=true]{box-shadow:0 0 0 2px var(--surface-raised-base,#161616),0 0 0 4px var(--c)}
+dialog[data-czek-cpe] .ce-sw:focus-visible{outline:2px solid var(--text-strong,#ededed);outline-offset:3px}
+dialog[data-czek-cpe] .ce-skills{display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;max-height:170px;overflow:auto;padding:6px 8px;border-radius:8px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--text-strong,#ededed) 10%,transparent)}
+dialog[data-czek-cpe] .ce-skill{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:8px;padding:3px 2px;cursor:pointer;min-width:0}
+dialog[data-czek-cpe] .ce-skill code{font:12px ui-monospace,"Cascadia Mono",Consolas,monospace;color:var(--text-strong,#ededed);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+dialog[data-czek-cpe] input[type=checkbox]{accent-color:#0F8584;margin:0}
+dialog[data-czek-cpe] .ce-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+dialog[data-czek-cpe] .ce-hint{font-size:12px;color:var(--text-base,#a0a0a0)}
+dialog[data-czek-cpe] .ce-foot{display:flex;align-items:center;gap:8px;padding:12px 18px 14px;box-shadow:0 -1px 0 color-mix(in srgb,var(--text-strong,#ededed) 8%,transparent)}
+dialog[data-czek-cpe] .ce-status{flex:1;min-width:0;font-size:12px;color:var(--text-base,#a0a0a0)}
+dialog[data-czek-cpe] .ce-status.ce-err{color:var(--text-strong,#ededed)}
+dialog[data-czek-cpe] button.ce-b{all:unset;box-sizing:border-box;height:30px;padding:0 12px;border-radius:7px;font-size:12.5px;font-weight:500;cursor:pointer;color:var(--text-strong,#ededed);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--text-strong,#ededed) 16%,transparent);transition:background-color .16s cubic-bezier(.25,1,.5,1)}
+dialog[data-czek-cpe] button.ce-b:hover{background:color-mix(in srgb,var(--text-strong,#ededed) 7%,transparent)}
+dialog[data-czek-cpe] button.ce-b:focus-visible{outline:2px solid var(--text-strong,#ededed);outline-offset:2px}
+dialog[data-czek-cpe] button.ce-primary{background:var(--text-strong,#ededed);color:var(--surface-raised-base,#161616);box-shadow:none}
+dialog[data-czek-cpe] button.ce-primary:hover{background:color-mix(in srgb,var(--text-strong,#ededed) 86%,transparent)}
+dialog[data-czek-cpe] button.ce-b[disabled]{opacity:.55;cursor:progress}
+dialog[data-czek-cpe] button.ce-x{all:unset;width:26px;height:26px;border-radius:6px;display:grid;place-items:center;cursor:pointer;color:var(--text-base,#a0a0a0)}
+dialog[data-czek-cpe] button.ce-x:hover{color:var(--text-strong,#ededed);background:color-mix(in srgb,var(--text-strong,#ededed) 7%,transparent)}
+@media (max-width:620px){dialog[data-czek-cpe] .ce-body,dialog[data-czek-cpe] .ce-skills{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){dialog[data-czek-cpe] *{transition:none}}`;
+
+async function openPresetEditor() {
+  const data = await ipcRenderer.invoke('presets:custom').catch(() => null);
+  if (!data) return;
+  if (!document.querySelector('style[data-czek-cpe]')) { const st = document.createElement('style'); st.setAttribute('data-czek-cpe', ''); st.textContent = CPE_CSS; document.head.append(st); }
+  document.querySelector('dialog[data-czek-cpe]')?.remove();
+  const dlg = el('dialog');
+  dlg.setAttribute('data-czek-cpe', '');
+  dlg.setAttribute('aria-labelledby', 'czek-cpe-title');
+  const form = el('form');
+  form.method = 'dialog';
+  const head = el('div', 'ce-head');
+  const title = el('div', 'ce-title', T('oc.cpTitle'));
+  title.id = 'czek-cpe-title';
+  const x = el('button', 'ce-x', '✕');
+  x.type = 'button'; x.title = T('oc.cpClose'); x.setAttribute('aria-label', T('oc.cpClose'));
+  x.addEventListener('click', () => dlg.close());
+  head.append(title, x);
+  const body = el('div', 'ce-body');
+  const field = (labelText, input, full) => { const l = el('label', 'ce-f' + (full ? ' ce-full' : '')); l.append(el('span', null, labelText), input); body.append(l); return input; };
+  const input = (max) => { const i = el('input'); i.type = 'text'; i.maxLength = max; i.spellcheck = false; return i; };
+  const pick = el('select');
+  field(T('oc.cpPick'), pick, true);
+  const name = field(T('oc.cpName'), input(40));
+  const tag = field(T('oc.cpTag'), input(40));
+  const desc = field(T('oc.cpDesc'), input(160), true);
+  // barva
+  const colorWrap = el('div', 'ce-f ce-full');
+  colorWrap.append(el('span', null, T('oc.cpColor')));
+  const colors = el('div', 'ce-colors');
+  colors.setAttribute('role', 'radiogroup');
+  colors.setAttribute('aria-label', T('oc.cpColor'));
+  let color = data.colors[0];
+  const sws = data.colors.map((c) => {
+    const b = el('button', 'ce-sw');
+    b.type = 'button'; b.setAttribute('role', 'radio'); b.setAttribute('aria-label', c); b.style.setProperty('--c', c);
+    b.addEventListener('click', () => { color = c; paintColors(); });
+    colors.append(b); return b;
+  });
+  const paintColors = () => sws.forEach((b, i) => b.setAttribute('aria-checked', String(data.colors[i] === color)));
+  colorWrap.append(colors);
+  body.append(colorWrap);
+  // skills
+  const skWrap = el('div', 'ce-f ce-full');
+  skWrap.append(el('span', null, T('oc.cpSkills')));
+  const skBox = el('div', 'ce-skills');
+  const checks = new Map();
+  for (const s of data.skills) {
+    const l = el('label', 'ce-skill');
+    l.title = s.desc || s.name;
+    const c = el('input'); c.type = 'checkbox'; c.value = s.name;
+    l.append(c, el('code', null, s.name));
+    skBox.append(l); checks.set(s.name, c);
+  }
+  skWrap.append(skBox);
+  body.append(skWrap);
+  // plán
+  const plan = el('textarea');
+  plan.placeholder = T('oc.cpPlanPh'); plan.spellcheck = false; plan.rows = 12;
+  field(T('oc.cpPlan'), plan, true);
+  const genRow = el('div', 'ce-row ce-full');
+  const gen = el('button', 'ce-b', T('oc.cpGen'));
+  gen.type = 'button';
+  genRow.append(gen, el('span', 'ce-hint', T('oc.cpGenHint')));
+  body.append(genRow);
+  // patička
+  const foot = el('div', 'ce-foot');
+  const status = el('div', 'ce-status');
+  status.setAttribute('aria-live', 'polite');
+  const del = el('button', 'ce-b', T('oc.cpDelete')); del.type = 'button';
+  const close = el('button', 'ce-b', T('oc.cpClose')); close.type = 'button';
+  const save = el('button', 'ce-b ce-primary', T('oc.cpSave')); save.type = 'submit';
+  foot.append(status, del, close, save);
+  form.append(head, body, foot);
+  dlg.append(form);
+  document.body.append(dlg);
+
+  let list = data.presets || [];
+  const say = (t, err) => { status.textContent = t || ''; status.classList.toggle('ce-err', !!err); };
+  const fillPick = (sel) => {
+    pick.replaceChildren();
+    const o = el('option', null, T('oc.cpNew')); o.value = ''; pick.append(o);
+    for (const p of list) { const op = el('option', null, p.name); op.value = p.id; pick.append(op); }
+    pick.value = sel || '';
+  };
+  const load = (id) => {
+    const p = list.find((q) => q.id === id) || null;
+    name.value = p?.name || ''; tag.value = p?.tag || ''; desc.value = p?.desc || ''; plan.value = p?.plan || '';
+    color = p?.color && data.colors.includes(p.color) ? p.color : data.colors[list.length % data.colors.length];
+    for (const [n, c] of checks) c.checked = !!p?.skills?.includes(n);
+    del.hidden = !p; paintColors(); say('');
+  };
+  const value = () => ({ id: pick.value || null, name: name.value, tag: tag.value, desc: desc.value, color, skills: [...checks].filter(([, c]) => c.checked).map(([n]) => n), plan: plan.value });
+  pick.addEventListener('change', () => load(pick.value));
+  close.addEventListener('click', () => dlg.close());
+  gen.addEventListener('click', async () => {
+    gen.disabled = true; say(T('oc.cpGenBusy'));
+    const r = await ipcRenderer.invoke('presets:generate', value()).catch((e) => ({ ok: false, error: e.message }));
+    gen.disabled = false;
+    if (r?.ok) { plan.value = r.plan; say(T('oc.cpGenDone', { model: r.model || 'Max' })); } else say(r?.error || '?', true);
+  });
+  del.addEventListener('click', async () => {
+    if (!pick.value) return;
+    const r = await ipcRenderer.invoke('presets:delete', pick.value).catch(() => null);
+    if (!r?.ok) return;
+    list = list.filter((p) => p.id !== pick.value);
+    fillPick(''); load(''); say(T('oc.cpDeleted'));
+  });
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    save.disabled = true;
+    const v = value();
+    const r = await ipcRenderer.invoke('presets:save', v).catch((err) => ({ ok: false, error: err.message }));
+    save.disabled = false;
+    if (!r?.ok) { say(r?.error || '?', true); return; }
+    const rec = { ...v, id: r.id };
+    list = list.some((p) => p.id === r.id) ? list.map((p) => (p.id === r.id ? rec : p)) : [...list, rec];
+    fillPick(r.id); del.hidden = false; say(T('oc.cpSaved'));
+  });
+  dlg.addEventListener('close', () => setTimeout(() => dlg.remove(), 0));
+  fillPick('');
+  load('');
+  dlg.showModal();
+  name.focus();
+}
+
+// ------------------------------------------------------------ Pravidla učitele (uživatel 26. 11.)
+// Přepínač nad levým okrajem promptu: Agentic Starter Kit učitele pro TENTO chat zapnout / vypnout (vypnuto = guard
+// pravidla kitu vyřízne z promptu a model je ignoruje i zpětně). Rozepsaný chat (bez id) → stav převezme 1. zpráva.
+const TEACHER_CSS = `[data-czek-teacher]{position:fixed;z-index:40;display:none;align-items:center;gap:8px;height:26px;padding:0 10px 0 8px;border:0;border-radius:7px;background:var(--surface-raised-base,#1c1c1c);box-shadow:0 0 0 .5px color-mix(in srgb,var(--text-strong,#ededed) 16%,transparent);color:var(--text-base,#a0a0a0);font:500 12px/1 Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer;transition:color .16s cubic-bezier(.22,1,.36,1)}
+[data-czek-teacher]:hover{color:var(--text-strong,#ededed)}
+[data-czek-teacher]:focus-visible{outline:2px solid var(--text-strong,#ededed);outline-offset:2px}
+[data-czek-teacher] .ct-track{position:relative;flex:none;width:22px;height:12px;border-radius:6px;background:color-mix(in srgb,var(--text-strong,#ededed) 22%,transparent);transition:background-color .16s}
+[data-czek-teacher] .ct-knob{position:absolute;top:2px;left:2px;width:8px;height:8px;border-radius:50%;background:var(--text-strong,#ededed);transition:transform .16s cubic-bezier(.22,1,.36,1)}
+[data-czek-teacher][aria-checked="true"]{color:var(--text-strong,#ededed)}
+[data-czek-teacher][aria-checked="true"] .ct-track{background:#0F8584}
+[data-czek-teacher][aria-checked="true"] .ct-knob{transform:translateX(10px);background:#fff}
+[data-czek-teacher].ct-inline{position:static;margin-left:auto;align-self:center;flex:none}
+@media (prefers-reduced-motion:reduce){[data-czek-teacher],[data-czek-teacher] *{transition:none}}`;
+
+function initTeacherSwitch() {
+  if (PREFS.teacher !== true) return;
+  const style = document.createElement('style');
+  style.textContent = TEACHER_CSS;
+  document.head.append(style);
+  const btn = el('button');
+  btn.type = 'button';
+  btn.setAttribute('role', 'switch');
+  btn.setAttribute('data-czek-teacher', '');
+  btn.title = T('oc.teacherTitle');
+  const track = el('span', 'ct-track');
+  track.append(el('span', 'ct-knob'));
+  const label = el('span', 'ct-label');
+  btn.append(track, label);
+  document.body.append(btn);
+  let sid = null; let draft = null; let on = false; let lastPath = null; let busy = false;
+  const sidOf = () => { const m = location.pathname.match(/\/session\/([\w-]{4,80})/); return m ? m[1] : null; };
+  const render = () => {
+    btn.setAttribute('aria-checked', String(on));
+    const t = `${T('oc.teacherLabel')}: ${on ? T('oc.teacherOn') : T('oc.teacherOff')}`;
+    if (label.textContent !== t) label.textContent = t;
+  };
+  const refresh = async () => {
+    const p = location.pathname;
+    if (p === lastPath || busy) return;
+    const wasDraft = (lastPath || '').includes('new-session');
+    lastPath = p;
+    const id = sidOf();
+    busy = true;
+    try {
+      // rozepsaný chat se právě stal relací → přepnutí z rozepsaného chatu patří jí
+      if (id && wasDraft && draft !== null) {
+        const r = await ipcRenderer.invoke('teacher:set', { sid: id, on: draft, adopt: true }).catch(() => null);
+        draft = null; sid = id;
+        if (r) { on = r.on; render(); }
+        return;
+      }
+      sid = id;
+      if (!id) draft = null;
+      const r = await ipcRenderer.invoke('teacher:get', id).catch(() => null);
+      if (r) { on = r.on; render(); }
+    } finally { busy = false; }
+  };
+  btn.addEventListener('click', async () => {
+    const r = await ipcRenderer.invoke('teacher:set', { sid, on: !on }).catch(() => null);
+    if (!r) return;
+    if (!sid) draft = r.on;
+    on = r.on;
+    render();
+  });
+  const place = () => {
+    refresh();
+    // nová relace s výběrem presetu (sedí přímo nad promptem): přepínač do hlavičky výběru, jinak plovoucí nad promptem
+    const head = document.querySelector('[data-czek-presets] .cp-head');
+    if (head && head.getBoundingClientRect().width > 0) {
+      if (btn.parentElement !== head) { head.append(btn); btn.classList.add('ct-inline'); btn.style.left = ''; btn.style.top = ''; }
+      if (btn.style.display !== 'inline-flex') btn.style.display = 'inline-flex';
+      return;
+    }
+    if (btn.parentElement !== document.body) { document.body.append(btn); btn.classList.remove('ct-inline'); }
+    // pole promptu: v otevřené relaci „shell“ docku, v nové relaci (draft) formulář s polem Prompt
+    const pb = document.querySelector('[aria-label="Prompt"]') || document.querySelector('form [contenteditable="true"]') || document.querySelector('textarea');
+    const r = [document.querySelector('[data-dock-surface="shell"]'), pb?.closest('form'), pb].map((e) => e?.getBoundingClientRect()).find((b) => b && b.width > 0);
+    if (!r) { if (btn.style.display !== 'none') btn.style.display = 'none'; return; }
+    btn.style.display = 'inline-flex';
+    btn.style.left = `${Math.round(r.left)}px`;
+    btn.style.top = `${Math.round(Math.max(8, r.top - btn.offsetHeight - 8))}px`;
+  };
+  render();
+  setInterval(place, 400);
+  window.addEventListener('resize', place);
+}
+
+// ------------------------------------------------------------ Vložení textu z VS Code (rozšíření czek-ai, src/webBridge.js)
+// „Zeptat se na výběr“, „Opravit chybu“ … ve VS Code → text do pole promptu (jen stránka se stejnou složkou projektu).
+function initVscodeInsert() {
+  const dirOfPage = () => {
+    const seg = location.pathname.split('/').filter(Boolean);
+    for (const s of seg) {
+      if (s.length < 8 || !/^[A-Za-z0-9_-]+$/.test(s)) continue;
+      try { const d = decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/')))); if (/^([a-zA-Z]:[\\/]|\/)/.test(d)) return d; } catch {}
+    }
+    return '';
+  };
+  const norm = (p) => String(p || '').replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
+  ipcRenderer.on('vscode:insert', (_e, d) => {
+    if (!d || typeof d.text !== 'string') return;
+    const here = dirOfPage();
+    if (d.dir && here && norm(d.dir) !== norm(here)) return;
+    const box = document.querySelector('[aria-label="Prompt"]') || document.querySelector('form [contenteditable="true"]') || document.querySelector('textarea');
+    if (!box) return;
+    box.focus();
+    const sel = window.getSelection();
+    if (box.isContentEditable && sel) { sel.selectAllChildren(box); sel.collapseToEnd(); }
+    const pre = (box.isContentEditable ? box.innerText : box.value).trim() ? '\n\n' : '';
+    if (!document.execCommand('insertText', false, pre + d.text)) {
+      if (box.isContentEditable) box.append(document.createTextNode(pre + d.text)); else box.value += pre + d.text;
+      box.dispatchEvent(new InputEvent('input', { bubbles: true }));
+    }
+  });
+}
+
+// každá část zvlášť: chyba jedné (např. v prohlížeči přes most bez Electronu) nesmí vypnout ostatní
+window.addEventListener('DOMContentLoaded', () => {
+  for (const f of [initLimits, initActive, initModelPopupBar, initNoModelsWatch, initVideoDock, initUpgradeBar, initPresetPicker, initTeacherSwitch, initVscodeInsert]) {
+    try { f(); } catch (e) { try { console.error('[czek-ai]', f.name, e); window.__czekErr = `${f.name}: ${e && e.message}`; } catch {} }
+  }
+});

@@ -1,5 +1,12 @@
 'use strict';
 const { app, BrowserWindow, ipcMain, dialog, shell, safeStorage, nativeTheme, Menu, session, Notification } = require('electron');
+// Webový most pro VS Code (src/webBridge.js): stejné obsluhy IPC jako okno OpenCode, volané přes HTTP s falešnou událostí.
+const { BRIDGE_SENDER } = require('./webBridge');
+const bridgeHandlers = new Map(); const bridgeSync = new Map();
+{ const h = ipcMain.handle.bind(ipcMain); ipcMain.handle = (ch, fn) => { bridgeHandlers.set(ch, fn); return h(ch, fn); };
+  const on = ipcMain.on.bind(ipcMain); ipcMain.on = (ch, fn) => { if (!bridgeSync.has(ch)) bridgeSync.set(ch, fn); return on(ch, fn); }; }
+// eslint-disable-next-line no-use-before-define
+function fromOcOrBridge(e) { return e?.sender === BRIDGE_SENDER || !!(ocWin && !ocWin.isDestroyed() && e?.sender === ocWin.webContents); }
 const fs = require('fs');
 const path = require('path');
 const { ModelRegistry, Agent } = require('./agent');
@@ -262,6 +269,7 @@ function loadSettings() {
   }
   const rawCustom = (raw.customProviders && raw.customProviders.length) ? raw.customProviders : (oldRaw?.customProviders || []);
   s.customProviders = rawCustom.map((c) => ({ ...c, key: dec(c.key) }));
+  s.vaultCode = raw.vaultCode ? dec(raw.vaultCode) : ''; // kód sdílené schránky klíčů (src/keyVault.js) – šifrovaně jako klíče
   // kdo měl Unfiltered zapnutý dřív, než se přepínač schoval do Pokročilých, ho nepřijde
   if (raw.showUnfiltered === undefined && raw.unfiltered) s.showUnfiltered = true;
   settings = s;
@@ -273,10 +281,12 @@ function saveSettings() {
   const out = JSON.parse(JSON.stringify(settings));
   for (const id of Object.keys(out.providers || {})) out.providers[id].key = enc(out.providers[id].key);
   out.customProviders = (out.customProviders || []).map((c) => ({ ...c, key: enc(c.key) }));
+  if (out.vaultCode) out.vaultCode = enc(out.vaultCode);
   fs.mkdirSync(DATA(), { recursive: true });
   fs.writeFileSync(SETTINGS_FILE(), JSON.stringify(out, null, 2));
   scheduleOmniSync(); // klíče / tierlisty se mohly změnit
   writeKeysFile();
+  scheduleVaultSync(); // sdílená schránka klíčů: jen když se klíče opravdu změnily
 }
 
 // ---------------------------------------------------------------- OmniRoute (směrovací jádro)
@@ -806,7 +816,7 @@ async function syncOpencodeConfig(so = {}) {
         // jinak přes proxy závodu modelů (src/race.js), která vše kromě kroků agenta jen přeposílá
         omniUrl: process.env.ZDARMA_TEST_PLUGIN_URL || raceUrl || omni.url,
         omniKey: apiKey,
-        builtinFree: settings.ocBuiltinFree === true,
+        builtinFree: settings.ocBuiltinFree !== false, // free modely OpenCode Zen (26. 11. výchozí zapnuto; guard hlídá limit)
         onlyTiers: settings.ocOnlyTiers !== false,
         fullAuto: settings.ocFullAuto === true,
         routed: settings.ocDirectProviders === true ? [] : routedOcProviders(),
@@ -815,6 +825,8 @@ async function syncOpencodeConfig(so = {}) {
         reviewer: settings.ocReviewer !== false, // kontroloví subagenti reviewer a reviewer-alt (výchozí zapnuto)
         caveman: settings.caveman !== false, // skill caveman trvale zapnutý (vypíná se v menu)
         presets: settings.presets !== false, // presety chatu: agenti + plán a skills přes czek-guard (vypíná se v menu)
+        teacher: settings.teacher !== false && opencode.teacherAvailable(), teacherState: teacherState(), // pravidla učitele: příkazy kitu + stav po relacích
+        customPresets: settings.customPresets, // vlastní presety uživatele (editor ve výběru presetu)
         cavemanSkill: path.join(SKILLS_BUNDLE(), 'caveman', 'SKILL.md'),
         methodSkill: path.join(SKILLS_BUNDLE(), 'czek-method', 'SKILL.md'), // postup práce + směrovač skills, trvale
         sysInfo: settings.sysContext !== false ? sysInfo() : null,
@@ -832,6 +844,8 @@ async function syncOpencodeConfig(so = {}) {
     migrateDefault: !settings.ocDefaultMaxDone, // jednou: dřívější výchozí High → Max
     fullAuto: settings.ocFullAuto === true,
     presets: settings.presets !== false,
+    teacher: settings.teacher !== false && opencode.teacherAvailable(), teacherState: teacherState(),
+    customPresets: settings.customPresets,
     sysInfo: settings.sysContext !== false ? sysInfo() : null,
     settings,
     registry,
@@ -907,6 +921,16 @@ function opencodeMenu() {
           // agenti presetů jsou v konfiguraci OpenCode → zápis + restart serveru, až nic neběží (jako caveman)
           label: I18N.t('menu.presets'), type: 'checkbox', checked: settings.presets !== false,
           click: (item) => { settings.presets = item.checked; saveSettings(); logLine('[opencode] presety chatu', item.checked ? 'zapnuté' : 'vypnuté'); refreshOpencodeModels().catch(() => {}); },
+        },
+        {
+          // přepínač u promptu (po relacích); tady jen výchozí stav pro nové chaty – živě přes teacher.json
+          label: I18N.t('menu.teacherDefault'), type: 'checkbox', checked: settings.teacherDefault === true,
+          click: (item) => { settings.teacherDefault = item.checked; saveTeacher(); logLine('[učitel] výchozí stav pro nové chaty', item.checked ? 'zapnuto' : 'vypnuto'); },
+        },
+        {
+          // vestavěný poskytovatel OpenCode Zen (free modely jen pro skutečné OpenCode) → zápis konfigurace + restart
+          label: I18N.t('menu.zen'), type: 'checkbox', checked: settings.ocBuiltinFree !== false,
+          click: (item) => { settings.ocBuiltinFree = item.checked; saveSettings(); logLine('[opencode] free modely Zen', item.checked ? 'zapnuté' : 'vypnuté'); refreshOpencodeModels().catch(() => {}); },
         },
         {
           // živě: proxy čte raceN() u každého dotazu
@@ -1332,7 +1356,7 @@ ipcMain.handle('monitor:openCalls', (e) => { if (fromMonitor(e)) { const d = pat
 ipcMain.handle('monitor:report', async (e) => { if (!fromMonitor(e)) return ''; const f = await writeSelfReport('monitor'); if (f) shell.openPath(f); return f; });
 ipcMain.handle('monitor:copy', (e, text) => { if (fromMonitor(e) && typeof text === 'string') require('electron').clipboard.writeText(text.slice(0, 2_000_000)); });
 ipcMain.handle('monitor:fullLog', (e, on) => { if (!fromMonitor(e)) return false; settings.fullLog = !!on; saveSettings(); if (on) startFullLog(); else stopFullLog(); return !!fullLog; });
-ipcMain.handle('oc:openMonitor', (e) => { if (ocWin && !ocWin.isDestroyed() && e.sender === ocWin.webContents) { openMonitorWindow(); return true; } return false; });
+ipcMain.handle('oc:openMonitor', (e) => { if (fromOcOrBridge(e)) { openMonitorWindow(); return true; } return false; });
 
 // Hlavní skript rozhraní OpenCode se při načtení upraví (viz ocPatch.js); ostatní požadavky projdou beze změny.
 let ocPatchInstalled = false;
@@ -1433,7 +1457,7 @@ function finishPicker(result) {
 ipcMain.on('oc:prefs', (e) => {
   // texty panelu v OpenCode přeložené předem (sandboxovaný preload si soubor s překlady načíst nemůže)
   const strings = Object.fromEntries(I18N.keys().filter((k) => k.startsWith('oc.')).map((k) => [k, I18N.t(k)]));
-  e.returnValue = ocWin && !ocWin.isDestroyed() && e.sender === ocWin.webContents
+  e.returnValue = fromOcOrBridge(e)
     ? {
       classicLayout: settings.ocClassicLayout !== false,
       videoDock: settings.videoDock !== false,
@@ -1443,20 +1467,196 @@ ipcMain.on('oc:prefs', (e) => {
       modelPopupWidth: Number(settings.modelPopupWidth) || 680,
       modelPopupHeight: Number(settings.modelPopupHeight) || 560,
       presets: settings.presets !== false ? uiPresets() : [],
+      teacher: settings.teacher !== false && opencode.teacherAvailable(),
     }
     : {};
+});
+// Pravidla učitele (Agentic Starter Kit): přepínač u promptu po relacích. Výchozí stav pro nové chaty =
+// settings.teacherDefault (vypnuto); přepnutí rozepsaného chatu (bez id) = pending, převezme ho 1. zpráva (guard).
+function teacherState() {
+  const sessions = settings.teacherSessions && typeof settings.teacherSessions === 'object' ? settings.teacherSessions : {};
+  const p = settings.teacherPending;
+  return { default: settings.teacherDefault === true, sessions, pending: p && Date.now() - p.at < 15 * 60e3 ? p : null };
+}
+const saveTeacher = () => { saveSettings(); if (settings.teacher !== false) opencode.writeTeacherState(teacherState(), true); };
+ipcMain.handle('teacher:get', (e, sid) => {
+  if (!fromOcOrBridge(e)) return null;
+  const st = teacherState();
+  const own = typeof sid === 'string' ? st.sessions[sid] : undefined;
+  return { on: own ?? st.default, explicit: own !== undefined, default: st.default };
+});
+ipcMain.handle('teacher:set', (e, d) => {
+  if (!fromOcOrBridge(e) || typeof d?.on !== 'boolean') return null;
+  if (typeof d.sid === 'string' && /^[\w-]{4,80}$/.test(d.sid)) {
+    const s = { ...(settings.teacherSessions || {}) };
+    delete s[d.sid]; s[d.sid] = d.on; // nejnovější na konec (strop 500 v opencode.writeTeacherState)
+    const keys = Object.keys(s); if (keys.length > 500) for (const k of keys.slice(0, keys.length - 500)) delete s[k];
+    settings.teacherSessions = s;
+    if (settings.teacherPending && d.adopt) settings.teacherPending = null;
+  } else settings.teacherPending = { on: d.on, at: Date.now() };
+  saveTeacher();
+  logLine('[učitel] pravidla učitele', d.on ? 'zapnutá' : 'vypnutá', d.sid ? 'v relaci ' + d.sid : 'v rozepsaném chatu');
+  return { on: d.on, explicit: true, default: settings.teacherDefault === true };
 });
 // Presety chatu pro výběr v nové relaci (src/presets): jen ty s plánem (= agent v konfiguraci OpenCode) + obecný chat
 function uiPresets() {
   try {
-    return opencode.presetsData(I18N.lang).filter((p) => p.plan || p.agent === 'build')
-      .map((p) => ({ id: p.id, agent: p.agent, color: p.color, name: p.name, tag: p.tag, desc: p.desc, skills: p.plan ? p.skills.length : 0 }));
+    return opencode.presetsData(I18N.lang, settings.customPresets).filter((p) => p.plan || p.agent === 'build')
+      .map((p) => ({ id: p.id, agent: p.agent, color: p.color, name: p.name, tag: p.tag, desc: p.desc, skills: p.plan ? p.skills.length : 0, custom: !!p.custom }));
   } catch { return []; }
+}
+// ---------------------------------------------------------------- vlastní presety (uživatel 26. 11.)
+// Editor je ve výběru presetu v nové relaci (src/ocPreload.js). Uložení → konfigurace OpenCode (agent my-…) + restart
+// serveru, až nic neběží (refreshOpencodeModels načte okno znovu → výběr ukáže nový preset).
+const fromOc = (e) => fromOcOrBridge(e);
+const PRESET_COLORS = ['#C8552B', '#2D6BE0', '#2A8A5C', '#C2362F', '#C98A14', '#0F8584', '#5A6878', '#8B6F47'];
+function skillChoices() {
+  const names = (leanSkills() || skills.bundled(SKILLS_BUNDLE())).filter((n) => n !== 'customize-opencode' && !/^(caveman|cavecrew)/.test(n));
+  return names.map((name) => {
+    let desc = '';
+    try {
+      const md = fs.readFileSync(path.join(SKILLS_BUNDLE(), name, 'SKILL.md'), 'utf8');
+      const m = md.match(/^description:\s*(.+)$/m);
+      desc = skills.shortDesc(String(m?.[1] || '').replace(/^['"]|['"]$/g, ''), 110);
+    } catch {}
+    return { name, desc };
+  });
+}
+const slugify = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32) || 'preset';
+ipcMain.handle('presets:custom', (e) => {
+  if (!fromOc(e)) return null;
+  return { presets: (settings.customPresets || []).map((p) => ({ ...p })), skills: skillChoices(), colors: PRESET_COLORS };
+});
+ipcMain.handle('presets:save', async (e, p) => {
+  if (!fromOc(e) || !p || typeof p !== 'object') return { ok: false, error: 'bad' };
+  const name = String(p.name || '').trim().slice(0, 40);
+  const plan = String(p.plan || '').trim();
+  if (!name) return { ok: false, error: I18N.t('oc.cpErrName') };
+  if (plan.length < 80) return { ok: false, error: I18N.t('oc.cpErrPlan') };
+  const known = new Set(skillChoices().map((s) => s.name));
+  const list = Array.isArray(settings.customPresets) ? [...settings.customPresets] : [];
+  let id = typeof p.id === 'string' && opencode.CUSTOM_ID.test(p.id) && list.some((x) => x.id === p.id) ? p.id : null;
+  if (!id) { const b = 'my-' + slugify(name); id = b; for (let i = 2; list.some((x) => x.id === id) || opencode.presetsData('en').some((x) => x.agent === id); i++) id = `${b}-${i}`; }
+  const rec = { id, name, tag: String(p.tag || '').trim().slice(0, 40), desc: String(p.desc || '').trim().slice(0, 160),
+    color: PRESET_COLORS.includes(p.color) ? p.color : PRESET_COLORS[0], skills: (Array.isArray(p.skills) ? p.skills : []).filter((s) => known.has(s)).slice(0, 12), plan: plan.slice(0, 12000) };
+  if (list.length >= 24 && !list.some((x) => x.id === id)) return { ok: false, error: I18N.t('oc.cpErrMax') };
+  const i = list.findIndex((x) => x.id === id);
+  if (i >= 0) list[i] = rec; else list.push(rec);
+  settings.customPresets = list;
+  saveSettings();
+  logLine('[presety] vlastní preset uložen', id, `(${rec.skills.length} skills, plán ${rec.plan.length} znaků)`);
+  refreshOpencodeModels().catch((err) => logLine('[presety] obnova konfigurace selhala', err.message));
+  return { ok: true, id };
+});
+ipcMain.handle('presets:delete', async (e, id) => {
+  if (!fromOc(e) || typeof id !== 'string') return { ok: false };
+  const list = (settings.customPresets || []).filter((x) => x.id !== id);
+  if (list.length === (settings.customPresets || []).length) return { ok: false };
+  settings.customPresets = list;
+  saveSettings();
+  logLine('[presety] vlastní preset smazán', id);
+  refreshOpencodeModels().catch(() => {});
+  return { ok: true };
+});
+// Jeden dotaz na model stejnou cestou jako agent (OmniRoute → závod → combo tieru Max, jinak záložní proxy czek-ai).
+async function modelChat(messages, { maxTokens = 3000, timeoutMs = 180000, tier = 'max' } = {}) {
+  let url, model, headers = { 'content-type': 'application/json' };
+  if (process.env.ZDARMA_TEST_MODEL_URL) { url = process.env.ZDARMA_TEST_MODEL_URL; model = tier; } // jen testy
+  else if (omni?.ready && raceUrl) {
+    url = raceUrl + '/v1/chat/completions';
+    model = omni.comboFor(tier) || `zdarma-${tier}`;
+    const key = omni.apiKey || await omni.ensureKey().catch(() => null);
+    if (key) headers.authorization = 'Bearer ' + key;
+  } else {
+    if (!proxy.server) await startProxy({ fallbackPort: true });
+    url = proxyStatus().url + '/chat/completions';
+    model = tier;
+  }
+  const r = await fetch(url, { method: 'POST', headers, signal: AbortSignal.timeout(timeoutMs), body: JSON.stringify({ model, stream: false, max_tokens: maxTokens, temperature: 0.3, messages }) });
+  const raw = await r.text();
+  let j = null; try { j = JSON.parse(raw); } catch {}
+  if (!r.ok) throw new Error(String(j?.error?.message || raw).slice(0, 300));
+  return { text: String(j?.choices?.[0]?.message?.content || '').trim(), model: r.headers.get('x-omniroute-model') || j?.model || model };
+}
+ipcMain.handle('presets:generate', async (e, p) => {
+  if (!fromOc(e) || !p) return { ok: false, error: 'bad' };
+  const gen = require('./presetGen');
+  const name = String(p.name || '').trim().slice(0, 40);
+  if (!name) return { ok: false, error: I18N.t('oc.cpErrName') };
+  const goal = [String(p.desc || '').trim(), String(p.tag || '').trim()].filter(Boolean).join(' – ') || name;
+  const known = new Set(skillChoices().map((s) => s.name));
+  const sk = (Array.isArray(p.skills) ? p.skills : []).filter((s) => known.has(s));
+  const t0 = Date.now();
+  try {
+    let last = [];
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const extra = last.length ? `A previous draft was rejected for: ${last.join('; ')}. Avoid that.` : '';
+      const r = await modelChat([{ role: 'user', content: gen.planPrompt({ name, goal, skills: sk, extra }) }]);
+      const plan = gen.cleanPlan(r.text);
+      last = gen.checkPlan(plan);
+      if (!last.length) { logLine('[presety] plán vlastního presetu napsal', r.model, `${Date.now() - t0} ms`); return { ok: true, plan, model: r.model }; }
+      logLine('[presety] plán vlastního presetu odmítnut kontrolou:', last.join('; '));
+    }
+    return { ok: false, error: I18N.t('oc.cpErrGen', { why: last.join('; ') }) };
+  } catch (err) {
+    logLine('[presety] psaní plánu selhalo', err.message);
+    return { ok: false, error: I18N.t('oc.cpErrGen', { why: err.name === 'TimeoutError' ? 'timeout' : err.message }) };
+  }
+});
+// ---------------------------------------------------------------- integrace do VS Code (src/webBridge.js, vscode/czek-ai)
+// Rozšíření czek-ai ve VS Code čte <userData>/vscode.json { port, token } a ukazuje stránku mostu (OpenCode + funkce
+// czek-ai) v panelu; modely czek-ai nabízí i vestavěnému chatu VS Code (/__czek/v1, stejná cesta jako agent).
+let webBridge = null;
+const BRIDGE_FILE = () => path.join(DATA(), 'vscode.json');
+function bridgeToken() {
+  try { const j = JSON.parse(fs.readFileSync(BRIDGE_FILE(), 'utf8')); if (/^[0-9a-f]{40}$/.test(j.token || '')) return j.token; } catch {}
+  return require('crypto').randomBytes(20).toString('hex');
+}
+async function bridgeModels(req, res, p) {
+  const send = (code, body) => { res.writeHead(code, { 'content-type': 'application/json' }); res.end(JSON.stringify(body)); };
+  const tiers = ['max', 'high', 'low'];
+  if (p === '/v1/models') return send(200, { object: 'list', data: tiers.map((id) => ({ id, object: 'model', owned_by: 'czek-ai' })) });
+  if (p !== '/v1/chat/completions' || req.method !== 'POST') return send(404, { error: { message: 'not found' } });
+  let body = '';
+  for await (const c of req) { body += c; if (body.length > 8_000_000) return send(413, { error: { message: 'too big' } }); }
+  let j; try { j = JSON.parse(body); } catch { return send(400, { error: { message: 'bad json' } }); }
+  const tier = tiers.includes(j.model) ? j.model : 'max';
+  let url, headers = { 'content-type': 'application/json' };
+  if (process.env.ZDARMA_TEST_MODEL_URL) { url = process.env.ZDARMA_TEST_MODEL_URL; j.model = tier; }
+  else if (omni?.ready && raceUrl) {
+    url = raceUrl + '/v1/chat/completions';
+    j.model = omni.comboFor(tier) || `zdarma-${tier}`;
+    const key = omni.apiKey || await omni.ensureKey().catch(() => null);
+    if (key) headers.authorization = 'Bearer ' + key;
+  } else {
+    if (!proxy.server) await startProxy({ fallbackPort: true });
+    url = proxyStatus().url + '/chat/completions';
+    j.model = tier;
+  }
+  const ctrl = new AbortController();
+  req.on('close', () => { if (!res.writableEnded) ctrl.abort(); });
+  try {
+    const r = await fetch(url, { method: 'POST', headers, body: JSON.stringify(j), signal: ctrl.signal });
+    res.writeHead(r.status, { 'content-type': r.headers.get('content-type') || 'application/json', 'cache-control': 'no-store' });
+    if (r.body) for await (const c of r.body) res.write(c);
+    res.end();
+    logLine('[most] VS Code chat:', tier, r.status);
+  } catch (e) { if (!res.headersSent) send(502, { error: { message: e.message } }); else res.end(); }
+}
+async function startWebBridge() {
+  if (webBridge || settings.vscodeBridge === false) return;
+  const token = bridgeToken();
+  webBridge = require('./webBridge').createBridge({ token, ocUrl: () => ocServer.url || '', preloadFile: path.join(__dirname, 'ocPreload.js'), handlers: bridgeHandlers, syncHandlers: bridgeSync, onModels: bridgeModels, log: logLine });
+  const want = Number(process.env.ZDARMA_BRIDGE_PORT) || Number(settings.bridgePort) || 4097;
+  const port = await webBridge.listen(want);
+  if (!port) { webBridge = null; return; }
+  try { fs.writeFileSync(BRIDGE_FILE(), JSON.stringify({ port, token, version: VERSION, pid: process.pid, at: new Date().toISOString() }, null, 1) + '\n'); } catch (e) { logLine('[most] vscode.json nejde zapsat', e.message); }
+  logLine('[most] webový most pro VS Code na portu', port);
 }
 // web OpenCode hlásí prázdný výběr modelu („No model results“ bez hledání) → hlídač hned, s reakcí
 let uiNoModelsAt = 0;
 ipcMain.on('oc:noModels', (e) => {
-  if (!ocWin || ocWin.isDestroyed() || e.sender !== ocWin.webContents) return;
+  if (!fromOcOrBridge(e)) return;
   if (Date.now() - uiNoModelsAt < 20000) return;
   uiNoModelsAt = Date.now();
   logLine('[opencode] výběr modelu je prázdný (No model results) –', ocWin.webContents.getURL().slice(-80));
@@ -1479,7 +1679,7 @@ ipcMain.handle('app:update', () => {
   return nb ? { current: VERSION, version: nb.version } : null;
 });
 ipcMain.handle('app:upgrade', (e) => {
-  if (!ocWin || ocWin.isDestroyed() || e.sender !== ocWin.webContents) return false;
+  if (!fromOcOrBridge(e)) return false;
   if (DEV_DIR) {
     if (!devPending) return false;
     logLine('[dev] restart do nové verze', devPending.up, devPending.subject);
@@ -1521,7 +1721,7 @@ ipcMain.handle('win:close', () => {
 const fromPicker = (e) => picker && !picker.win.isDestroyed() && e.sender === picker.win.webContents;
 
 ipcMain.handle('oc:pickFolder', (e, opts) => {
-  if (!ocWin || ocWin.isDestroyed() || e.sender !== ocWin.webContents) return null;
+  if (!fromOcOrBridge(e)) return null;
   if (picker) { picker.win.focus(); return null; }
   return new Promise((resolve) => {
     const w = new BrowserWindow({
@@ -1693,7 +1893,7 @@ async function omniToday() {
   return omniTodayCache.val;
 }
 ipcMain.handle('oc:limits', async (e, dir, sessionId) => {
-  if (!ocWin || ocWin.isDestroyed() || e.sender !== ocWin.webContents) return null;
+  if (!fromOcOrBridge(e)) return null;
   const key = `${dir}|${sessionId}`;
   if (totalsCache.key !== key || Date.now() - totalsCache.at > 5000) totalsCache = { key, at: Date.now(), val: diag.usageTotals({ sessionId, dir }) };
   return { totals: totalsCache.val, omni: await omniToday() };
@@ -1747,7 +1947,7 @@ function activeInfo() {
   const cur = a ? [...a.current.values()].sort((x, y) => y.since - x.since) : [];
   return { current: cur, last: omniLast || a?.last || null, tierNames: names, now: Date.now(), fullAuto: settings.ocFullAuto === true };
 }
-ipcMain.handle('oc:active', (e) => (ocWin && !ocWin.isDestroyed() && e.sender === ocWin.webContents ? activeInfo() : null));
+ipcMain.handle('oc:active', (e) => (fromOcOrBridge(e) ? activeInfo() : null));
 ipcMain.handle('proxy:opencode', async () => {
   try {
     const { file } = await syncOpencodeConfig({ fresh: true });
@@ -1805,6 +2005,99 @@ setTimeout(() => runKeyHealth(true), 2 * 60e3);
 setInterval(() => runKeyHealth(true), 30 * 60e3);
 // ---------------------------------------------------------------- klíče v soukromém repu (private/keys.json)
 const keysync = require('./keysync');
+// ---------------------------------------------------------------- klíče na více zařízeních (src/keyVault.js)
+// Uživatel 26. 11.: notebook, PC a školní PC – jeden kód, klíče se doplní samy. Šifruje se tady (AES-256-GCM,
+// klíč ze scrypt kódu); server (Supabase, site/supabase/key_vault.sql) vidí jen šifrovaný blob.
+const keyVault = require('./keyVault');
+let vaultState = { at: 0, error: '', imported: [], pushed: false };
+let vaultTimer = null;
+let vaultSig = '';
+const vaultSigNow = () => { try { return JSON.stringify(keysync.toExport(settings)); } catch { return ''; } };
+// testy (ZDARMA_USER_DATA) nikdy na produkční server – jen s CZEK_VAULT_URL (falešný server testu)
+const vaultAllowed = () => !process.env.ZDARMA_USER_DATA || !!process.env.CZEK_VAULT_URL;
+function scheduleVaultSync() {
+  if (!settings?.vaultCode || !vaultAllowed() || vaultSigNow() === vaultSig) return;
+  clearTimeout(vaultTimer);
+  vaultTimer = setTimeout(() => runVaultSync('změna klíčů').catch(() => {}), 2500);
+}
+async function runVaultSync(why) {
+  if (!settings.vaultCode || !vaultAllowed()) return vaultView();
+  try {
+    const r = await keyVault.sync(settings.vaultCode, settings);
+    vaultSig = vaultSigNow();
+    vaultState = { at: Date.now(), error: '', imported: r.imported, pushed: r.pushed };
+    logLine('[sdílení klíčů]', why, r.imported.length ? `doplněno: ${r.imported.join(', ')}` : 'nic nového', r.pushed ? '(nahráno)' : '');
+    if (r.imported.length) { saveSettings(); try { send('keys:changed', r.imported); } catch {} }
+  } catch (e) {
+    vaultState = { ...vaultState, at: Date.now(), error: e.message };
+    logLine('[sdílení klíčů] synchronizace selhala:', why, e.message);
+  }
+  return vaultView();
+}
+const vaultView = () => ({ linked: !!settings.vaultCode, code: settings.vaultCode ? keyVault.pretty(settings.vaultCode) : null, ...vaultState });
+const vaultErr = (e) => ({ ...vaultView(), ok: false, error: e === 'no server' ? I18N.t('vault.noServer') : e === 'forbidden' ? I18N.t('vault.forbidden') : e === 'rate limit' ? I18N.t('vault.rate') : e });
+ipcMain.handle('vault:get', () => vaultView());
+ipcMain.handle('clipboard:write', (e, text) => { if (win && !win.isDestroyed() && e.sender === win.webContents && typeof text === 'string') require('electron').clipboard.writeText(text.slice(0, 200)); });
+ipcMain.handle('vault:sync', async () => runVaultSync('ručně'));
+ipcMain.handle('vault:create', async () => {
+  if (settings.vaultCode) return vaultView();
+  const code = keyVault.newCode();
+  try {
+    if (!vaultAllowed()) throw new Error('tests');
+    await keyVault.push(code, settings);
+  } catch (e) { return vaultErr(e.message); }
+  settings.vaultCode = keyVault.normCode(code);
+  vaultSig = vaultSigNow();
+  vaultState = { at: Date.now(), error: '', imported: [], pushed: true };
+  saveSettings();
+  logLine('[sdílení klíčů] schránka vytvořena (kód jen u uživatele)');
+  return { ...vaultView(), ok: true };
+});
+ipcMain.handle('vault:join', async (_e, code) => {
+  const c = keyVault.normCode(code);
+  if (!c) return vaultErr(I18N.t('vault.badCode'));
+  try {
+    if (!vaultAllowed()) throw new Error('tests');
+    const r = await keyVault.pull(c, settings);
+    if (!r.found) return vaultErr(I18N.t('vault.notFound'));
+    settings.vaultCode = c;
+    await keyVault.push(c, settings).catch(() => {}); // sjednocení: klíče, které má jen tohle zařízení
+    vaultSig = vaultSigNow();
+    vaultState = { at: Date.now(), error: '', imported: r.imported, pushed: true };
+    saveSettings();
+    logLine('[sdílení klíčů] zařízení připojeno, doplněno:', r.imported.join(', ') || 'nic');
+    return { ...vaultView(), ok: true };
+  } catch (e) { return vaultErr(e.message); }
+});
+ipcMain.handle('vault:unlink', async (_e, wipe) => {
+  if (!settings.vaultCode) return vaultView();
+  if (wipe) { try { await keyVault.remove(settings.vaultCode); } catch (e) { return vaultErr(e.message); } }
+  settings.vaultCode = '';
+  vaultState = { at: 0, error: '', imported: [], pushed: false };
+  saveSettings();
+  logLine('[sdílení klíčů] zařízení odpojeno', wipe ? '(schránka smazána ze serveru)' : '');
+  return { ...vaultView(), ok: true };
+});
+// bez serveru: šifrovaný soubor (flashka, cloudový disk) se stejným kódem
+ipcMain.handle('vault:exportFile', async () => {
+  const code = settings.vaultCode || keyVault.newCode();
+  const r = await dialog.showSaveDialog(win && !win.isDestroyed() ? win : undefined, { title: I18N.t('vault.fileSave'), defaultPath: 'czek-ai-klice.czekkeys', filters: [{ name: 'czek-ai', extensions: ['czekkeys'] }] });
+  if (r.canceled || !r.filePath) return { ok: false };
+  fs.writeFileSync(r.filePath, keyVault.toFile(code, settings));
+  logLine('[sdílení klíčů] šifrovaný soubor uložen');
+  return { ok: true, file: r.filePath, code: keyVault.pretty(code) };
+});
+ipcMain.handle('vault:importFile', async (_e, code) => {
+  if (!keyVault.normCode(code)) return { ok: false, error: I18N.t('vault.badCode') };
+  const r = await dialog.showOpenDialog(win && !win.isDestroyed() ? win : undefined, { title: I18N.t('vault.fileOpen'), properties: ['openFile'], filters: [{ name: 'czek-ai', extensions: ['czekkeys', 'json'] }] });
+  if (r.canceled || !r.filePaths?.[0]) return { ok: false };
+  try {
+    const got = keyVault.fromFile(fs.readFileSync(r.filePaths[0], 'utf8'), code, settings);
+    saveSettings();
+    logLine('[sdílení klíčů] načteno ze souboru:', got.join(', ') || 'nic nového');
+    return { ok: true, imported: got };
+  } catch (e) { return { ok: false, error: /auth|decrypt|Unsupported state/i.test(e.message) ? I18N.t('vault.wrongCode') : e.message }; }
+});
 let keysFileInfo = { file: '', at: 0, imported: [], error: '' };
 /** Cesta k souboru s klíči: CZEK_KEYS_FILE → nastavení → klon repa na disku (ne v testovacím profilu). */
 function keysFilePath() {
@@ -2523,7 +2816,7 @@ app.on('second-instance', (_e, argv) => {
   }, 0);
 });
 
-app.on('will-quit', () => { omniInstall.abort?.abort(); clearTimeout(refreshTimer); ocEvAbort?.abort(); ocServer.stop(); stopOmni(); });
+app.on('will-quit', () => { try { webBridge?.close(); } catch {} omniInstall.abort?.abort(); clearTimeout(refreshTimer); ocEvAbort?.abort(); ocServer.stop(); stopOmni(); });
 // Proč Zdarma skončila: 8. 11. 0.12.11 po 50 s zmizela a log neřekl nic (zavřené okno? pád?).
 let quitting = false;
 app.on('before-quit', () => { quitting = true; logLine('[app] ukončení (before-quit)'); });
@@ -2579,6 +2872,7 @@ app.whenReady().then(async () => {
   const withSplash = !HEADLESS && !CLASSIC;
   if (withSplash) showSplash();
   syncKeysFile(); // klíče z private/keys.json v soukromém repu (jiný PC je tam mohl přidat)
+  if (settings.vaultCode) runVaultSync('start').catch(() => {}); // sdílená schránka klíčů (jiné zařízení mohlo přidat)
   importOpencodeKeys();
   startFullLog();
   if (HEADLESS) {
@@ -2639,6 +2933,7 @@ app.whenReady().then(async () => {
     logLine('[průvodce] po otevření okna OpenCode přenesen dopředu');
   }
   startPublicTier();
+  startWebBridge().catch((e) => logLine('[most] start selhal', e.message));
   if (DEV_DIR) {
     const tick = async () => { try { devPending = await devUpdate.poll(DEV_DIR, { log: logLine }); } catch (e) { logLine('[dev] kontrola selhala', e.message); } };
     const every = Number(process.env.CZEK_DEV_POLL_MS) || 10 * 60e3;

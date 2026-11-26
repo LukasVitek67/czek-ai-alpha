@@ -1,0 +1,58 @@
+{
+  "name": "czek-ai",
+  "displayName": "czek-ai",
+  "description": "Chat czek-ai přímo ve VS Code: agent OpenCode s free modely, presety, pravidla učitele, vlastní presety – a modely czek-ai i ve vestavěném chatu VS Code.",
+  "version": "0.1.0",
+  "publisher": "czek-ai",
+  "private": true,
+  "license": "SEE LICENSE IN README.md",
+  "icon": "media/icon.png",
+  "engines": { "vscode": "^1.104.0" },
+  "categories": ["AI", "Chat", "Programming Languages"],
+  "keywords": ["ai", "chat", "agent", "opencode", "free", "czek-ai"],
+  "main": "./extension.js",
+  "activationEvents": ["onStartupFinished"],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [{ "id": "czekAi", "title": "czek-ai", "icon": "media/icon.svg" }]
+    },
+    "views": {
+      "czekAi": [{ "type": "webview", "id": "czekAi.chat", "name": "Chat", "icon": "media/icon.svg" }]
+    },
+    "commands": [
+      { "command": "czekAi.focus", "title": "Otevřít chat", "category": "czek-ai", "icon": "$(comment-discussion)" },
+      { "command": "czekAi.openTab", "title": "Otevřít chat v editoru", "category": "czek-ai", "icon": "$(link-external)" },
+      { "command": "czekAi.reload", "title": "Načíst chat znovu", "category": "czek-ai", "icon": "$(refresh)" },
+      { "command": "czekAi.ask", "title": "Zeptat se na výběr", "category": "czek-ai" },
+      { "command": "czekAi.explain", "title": "Vysvětlit kód", "category": "czek-ai" },
+      { "command": "czekAi.fix", "title": "Opravit s czek-ai", "category": "czek-ai" },
+      { "command": "czekAi.tests", "title": "Napsat testy", "category": "czek-ai" },
+      { "command": "czekAi.start", "title": "Spustit czek-ai", "category": "czek-ai" }
+    ],
+    "keybindings": [
+      { "command": "czekAi.ask", "key": "ctrl+alt+i", "mac": "cmd+alt+i", "when": "editorTextFocus" },
+      { "command": "czekAi.focus", "key": "ctrl+alt+c", "mac": "cmd+alt+c" }
+    ],
+    "menus": {
+      "editor/context": [
+        { "command": "czekAi.ask", "group": "0_czekAi@1" },
+        { "command": "czekAi.explain", "group": "0_czekAi@2" },
+        { "command": "czekAi.fix", "group": "0_czekAi@3" },
+        { "command": "czekAi.tests", "group": "0_czekAi@4" }
+      ],
+      "view/title": [
+        { "command": "czekAi.reload", "when": "view == czekAi.chat", "group": "navigation@1" },
+        { "command": "czekAi.openTab", "when": "view == czekAi.chat", "group": "navigation@2" }
+      ]
+    },
+    "languageModelChatProviders": [{ "vendor": "czek-ai", "displayName": "czek-ai" }],
+    "configuration": {
+      "title": "czek-ai",
+      "properties": {
+        "czekAi.appPath": { "type": "string", "default": "", "description": "Cesta k czek-ai (czek-ai.exe). Prázdné = najít samo (nainstalovaná appka, dev verze, plocha)." },
+        "czekAi.connectionFile": { "type": "string", "default": "", "description": "Soubor s portem a tokenem mostu czek-ai (vscode.json v profilu czek-ai). Prázdné = %APPDATA%\\czek-ai\\vscode.json." },
+        "czekAi.chatModels": { "type": "boolean", "default": true, "description": "Nabízet modely czek-ai (Max, High, Low) ve vestavěném chatu VS Code." }
+      }
+    }
+  }
+}

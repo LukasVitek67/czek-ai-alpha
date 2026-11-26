@@ -54,6 +54,14 @@
     "czek": {
       "url": "https://github.com/LukasVitek67/czek-ai-alpha",
       "license": "MIT"
+    },
+    "securityaudit": {
+      "url": "https://github.com/cloudflare/security-audit-skill",
+      "license": "MIT"
+    },
+    "hallmark": {
+      "url": "https://github.com/nutlope/hallmark",
+      "license": "MIT"
     }
   },
   "skills": [
@@ -142,6 +150,26 @@
       "needs": ""
     },
     {
+      "name": "security-audit",
+      "group": "work",
+      "impact": 72,
+      "badge": "bezpečnost",
+      "source": "securityaudit",
+      "summary": "bezpečnostní audit kódu od Cloudflare: ověřené nálezy, opravy",
+      "what": "Obranný postup od zdrojového kódu: průzkum, hledání podle tříd útoků (web, autentizace, API, klientská strana, desktop a IPC, AI/LLM, dodavatelský řetězec…), nezávislé ověření každého nálezu a zpráva s důkazem, prioritou a nejmenší opravou. Na otázky jen jako rady, celý audit jen na výslovné požádání.",
+      "when": [
+        "Před odevzdáním nebo nasazením projektu s přihlašováním, API nebo uploady.",
+        "Chceš zjistit, jestli je kód zranitelný (injekce, autorizace, únik dat).",
+        "Učitel chce bezpečnostní zprávu."
+      ],
+      "examples": [
+        "Udělej security audit tohoto projektu a vypiš ověřené nálezy.",
+        "Je tenhle login bezpečný? Podívej se podle security-audit.",
+        "Projdi API endpointy na chybějící autorizaci."
+      ],
+      "needs": "Validátory zprávy jsou v Node (je v czek-ai). Nic se neinstaluje."
+    },
+    {
       "name": "czek-git",
       "group": "work",
       "impact": 70,
@@ -228,6 +256,26 @@
         "Udělej tenhle dashboard klidnější a čitelnější podle impeccable."
       ],
       "needs": "Při prvním použití si stáhne svůj pomocný program z GitHubu autora (bez dalších závislostí)."
+    },
+    {
+      "name": "hallmark",
+      "group": "visual",
+      "impact": 94,
+      "badge": "design",
+      "source": "hallmark",
+      "summary": "nové stránky, které vypadají navržené, ne vygenerované",
+      "what": "Pevná „podlaha“ proti výchozím vzorům AI (tokeny, žádné eyebrow štítky, fokus, reduced motion, kontejner), přidělený směr designu, aby po sobě jdoucí weby nevypadaly stejně, 21 makrostruktur stránky a kontrola sloplint, která výsledek vykreslí a najde chyby. Umí i redesign a audit.",
+      "when": [
+        "Stavíš nový web, landing page nebo stránku od nuly.",
+        "Chceš, aby další web nevypadal jako ten minulý.",
+        "Chceš strojovou kontrolu „AI vzhledu“ (sloplint)."
+      ],
+      "examples": [
+        "Použij hallmark: landing page pro kavárnu na rohu, česky.",
+        "/hallmark redesign index.html",
+        "/hallmark audit site/"
+      ],
+      "needs": "Kontrola sloplint potřebuje Node (je v czek-ai). Generování obrázků jen s vlastním klíčem Together AI (jinak CSS art / zástupný obrázek)."
     },
     {
       "name": "unslop-ui",

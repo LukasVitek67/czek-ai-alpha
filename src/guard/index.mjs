@@ -8,6 +8,7 @@ import { searchTools, loadPluginApi, findRg } from './search.mjs';
 import { lookTool } from './look.mjs';
 import { backgroundize, releaseLocks, pruneLogs, findLaunch } from './launch.mjs';
 import { loadPresets, presetBlock, isTitleRequest } from './presets.mjs';
+import { loadTeacher, sessionState, stripKit, hasKit, onBlock, OFF_BLOCK } from './teacher.mjs';
 
 // Úplný log czek-ai: každé rozhodnutí guardu (blok, přepis příkazu, poznámka modelu, kontrola po editu,
 // zastavení opakování, zkrácení kontextu) jako JSON řádek do souboru z CZEK_GUARD_LOG (nastaví czek-ai).
@@ -72,6 +73,12 @@ export const CzekGuard = async (ctx, options) => {
   const brokenSent = new Map(); // sessionID → [časy]
   // Závod modelů (src/race.js): vítěz začal odpovídat a pak 90 s nic → proxy krok ukončí chybou „stream_stalled“.
   // OpenCode takovou chybu nezopakuje (ověřeno test/oc-race.js) a relace by stála; guard pošle pokračování.
+  // Free modely OpenCode Zen (vestavěný poskytovatel „opencode“, src/opencode.js applyZen): limit / chyba / utnutý
+  // stream → pokračovat na tieru czek-ai (OmniRoute, záloha a hlídání zaseknutí). Uživatel 26. 11.: dsh-our-free-model.
+  const ZEN_FALLBACK = opts.zenFallback || { providerID: 'opencode-omniroute', modelID: 'zdarma-max' };
+  const zenFail = new Map(); // sessionID → důvod selhání Zen (při nečinnosti relace → pokračování na tieru Max)
+  const zenAborted = new Set(); // relace, kde opakování na Zen zastavil guard (ne uživatel)
+  const ZEN_TEXT = (why) => `The previous model (a free OpenCode Zen model) stopped: ${String(why).replace(/[.\s]+$/, '')}. czek-ai switched this chat to its Max tier. Continue the task exactly where it stopped; do not repeat steps that already finished.`;
   const STALLED_TEXT = 'The model stopped responding in the middle of your previous step, so that step was cancelled. Continue the task from where it stopped (repeat the last tool call if it did not run).';
   const BROKEN_TEXT = (n) => `The project still does not compile: the last check after your edit reported ${n} error${n > 1 ? 's' : ''}, so the task is not finished. Continue fixing ${n > 1 ? 'them' : 'it'} now, using the full compiler message from that check (read its note/help lines). If you truly cannot go on without the user, ask one concrete question instead of stopping.`;
   // Slíbil, ale nic neudělal: uživatel zadal úkol („udělej mi web“), model napsal „jasně, tady to máš“ / „hotovo“
@@ -85,6 +92,9 @@ export const CzekGuard = async (ctx, options) => {
   // Presety chatu (presets.mjs): agent zprávy uživatele → plán + skills presetu do systémového promptu relace.
   const presets = opts.presets === false ? {} : loadPresets(opts.presetsFile); // presetsFile jen pro testy
   const presetOf = new Map(); // sessionID → agent presetu
+  const teacherFile = opts.teacherFile; // jen pro testy (jinak teacher.json vedle pluginu)
+  const teacherAdopted = new Map(); // sessionID → stav z přepnutí v rozepsaném chatu (pending)
+  const teacherSeen = new Map(); // sessionID → naposledy použitý stav (log jen při změně)
   const autoContinue = (id, la, why = 'length') => {
     if (!la.providerID || !la.modelID) return;
     const now = Date.now();
@@ -100,10 +110,11 @@ export const CzekGuard = async (ctx, options) => {
     const errs = broken.get(id) || 0;
     glog('continue', why === 'promised' ? `relace ${id}: model odpověděl, jako by úkol udělal, ale nezavolal žádný nástroj → posílám výzvu udělat ho opravdu (${recent.length + 1}. za 10 min)`
       : why === 'tooltext' ? `odpověď relace ${id} obsahovala volání nástroje jako text → posílám výzvu zavolat ho správně (${recent.length + 1}. za 10 min)`
+      : why === 'zen' ? `free model Zen v relaci ${id} skončil (${la.zenWhy}) → pokračuji na tieru Max ${model.providerID}/${model.modelID} (${recent.length + 1}. za 10 min)`
       : why === 'stalled' ? `model v relaci ${id} zmlkl uprostřed odpovědi (závod modelů krok ukončil) → posílám pokračování (${recent.length + 1}. za 10 min)`
       : why === 'broken' ? `relace ${id} skončila, ale projekt nejde přeložit (${errs} chyb po posledním editu) → posílám pokračování (${recent.length + 1}. za 10 min)`
         : `odpověď relace ${id} skončila limitem výstupu → posílám pokračování (${recent.length + 1}. za 10 min)`, { session: id, ...model, agent: la.agent, count: recent.length + 1, why, ...(why === 'broken' ? { errors: errs } : {}) });
-    const text = why === 'promised' ? PROMISED_TEXT : why === 'tooltext' ? TOOLTEXT_TEXT : why === 'broken' ? BROKEN_TEXT(errs) : why === 'stalled' ? STALLED_TEXT : CONTINUE_TEXT;
+    const text = why === 'zen' ? ZEN_TEXT(la.zenWhy) : why === 'promised' ? PROMISED_TEXT : why === 'tooltext' ? TOOLTEXT_TEXT : why === 'broken' ? BROKEN_TEXT(errs) : why === 'stalled' ? STALLED_TEXT : CONTINUE_TEXT;
     // až po doběhnutí obsluhy události; promptAsync jen odešle zprávu a hned vrátí (neblokuje hook)
     setTimeout(() => { ctx?.client?.session?.promptAsync({ path: { id }, body: { parts: [{ type: 'text', text }], model, ...(la.agent ? { agent: la.agent } : {}) } }).catch((e) => glog('continue-error', `pokračování relace ${id} selhalo: ${e?.message || e}`, { session: id })); }, 300);
   };
@@ -149,6 +160,14 @@ export const CzekGuard = async (ctx, options) => {
         if (said && !said.startsWith('You answered as if') && !/^(Your previous reply|The model stopped|The project still)/.test(said)) askOf.set(input.sessionID, { action: ACTION_ASK.test(said), tool: false, sent: false });
         if (askOf.size > 200) askOf.delete(askOf.keys().next().value);
       }
+      // pravidla učitele: rozepsaný chat přepnutý před 1. zprávou → stav převezme tahle relace
+      if (input?.sessionID) {
+        const t = loadTeacher(teacherFile);
+        if (t?.pending && sessionState(t, input.sessionID, teacherAdopted) === undefined && Date.now() - t.pending.at < 15 * 60e3) {
+          teacherAdopted.set(input.sessionID, t.pending.on);
+          if (teacherAdopted.size > 200) teacherAdopted.delete(teacherAdopted.keys().next().value);
+        }
+      }
       // preset relace = agent zprávy uživatele (přepnutí na jiného agenta, např. build, preset vypne)
       if (input?.sessionID && input?.agent) {
         const p = presets[input.agent];
@@ -161,10 +180,29 @@ export const CzekGuard = async (ctx, options) => {
     },
     // preset relace: povinné skills + plán postupu na konec systémového promptu (titulek relace ne)
     'experimental.chat.system.transform': async (input, output) => {
+      if (!Array.isArray(output?.system) || isTitleRequest(output.system)) return;
+      // pravidla učitele (Agentic Starter Kit): zapnuto → platí; vypnuto → bloky kitu pryč z promptu + „ignoruj i dřívější“
+      const t = loadTeacher(teacherFile);
+      if (t && input?.sessionID) {
+        const st = sessionState(t, input.sessionID, teacherAdopted);
+        const on = st ?? t.default;
+        const projectKit = hasKit(output.system);
+        if (on) output.system.push(onBlock(t.kitDir, projectKit));
+        else {
+          const removed = [];
+          for (let i = 0; i < output.system.length; i++) { const r = stripKit(output.system[i]); if (r.removed.length) { output.system[i] = r.text; removed.push(...r.removed); } }
+          if (removed.length || st === false) output.system.push(OFF_BLOCK);
+        }
+        const key = on ? (projectKit ? 'on:project' : 'on:kit') : 'off';
+        if (teacherSeen.get(input.sessionID) !== key) {
+          glog('teacher', `relace ${input.sessionID}: pravidla učitele ${on ? 'zapnutá' : 'vypnutá'}${projectKit ? ' (projekt má AGENTS.md kitu)' : ''}`, { session: input.sessionID, on, projectKit, explicit: st !== undefined });
+          teacherSeen.set(input.sessionID, key);
+          if (teacherSeen.size > 200) teacherSeen.delete(teacherSeen.keys().next().value);
+        }
+      }
       const a = input?.sessionID ? presetOf.get(input.sessionID) : null;
       const p = a ? presets[a] : null;
-      if (!p || !Array.isArray(output?.system) || isTitleRequest(output.system)) return;
-      output.system.push(presetBlock(p));
+      if (p) output.system.push(presetBlock(p));
     },
     'tool.execute.before': async (input, output) => {
       pending.set(input.callID, output.args);
@@ -231,6 +269,12 @@ export const CzekGuard = async (ctx, options) => {
     event: async ({ event }) => {
       if (event?.type === 'message.updated') {
         const m = event.properties?.info;
+        // Zen selhal (limit, chyba, utnutý stream; ne zastavení uživatelem) → po doběhnutí pokračovat na tieru Max
+        if (m?.role === 'assistant' && m.sessionID && m.providerID === 'opencode' && m.error && (m.error.name !== 'MessageAbortedError' || zenAborted.has(m.sessionID))) {
+          if (!zenFail.has(m.sessionID)) glog('zen-fail', `free model Zen ${m.modelID} v relaci ${m.sessionID} selhal: ${m.error?.data?.message || m.error?.name}`, { session: m.sessionID, model: m.modelID, error: m.error });
+          zenFail.set(m.sessionID, String(m.error?.data?.message || m.error?.name || 'error').replace(/s+/g, ' ').slice(0, 200));
+          if (zenFail.size > 200) zenFail.delete(zenFail.keys().next().value);
+        }
         if (m?.role === 'assistant' && m.sessionID) lastAsst.set(m.sessionID, { id: m.id, finish: m.finish, providerID: m.providerID, modelID: m.modelID, agent: m.mode, stalled: /stream_stalled/.test(JSON.stringify(m.error || '')) });
         if (m?.role === 'assistant' && m.error && m.error.name !== 'ContextOverflowError' && m.providerID && m.modelID
           && OVERFLOW.test(JSON.stringify(m.error))) {
@@ -246,7 +290,10 @@ export const CzekGuard = async (ctx, options) => {
         if (st?.type === 'idle') {
           const la = lastAsst.get(id);
           lastAsst.delete(id);
-          if (la?.finish === 'length' && !overflowIdle) autoContinue(id, la);
+          const zenWhy = zenFail.get(id);
+          zenFail.delete(id); zenAborted.delete(id);
+          if (zenWhy && !overflowIdle) autoContinue(id, { ...(la || {}), ...ZEN_FALLBACK, zenWhy }, 'zen');
+          else if (la?.finish === 'length' && !overflowIdle) autoContinue(id, la);
           // vítěz závodu modelů zmlkl uprostřed odpovědi a proxy krok ukončila chybou (src/race.js) → pokračovat
           else if (la?.stalled && !overflowIdle) autoContinue(id, la, 'stalled');
           else if (la?.finish === 'stop' && !overflowIdle) {
@@ -274,6 +321,14 @@ export const CzekGuard = async (ctx, options) => {
           } else glog('compact-skip', `zkrácení relace ${id} přeskočeno: už 2× za 10 min`, { session: id });
         }
         if (st?.type !== 'retry') { if (st?.type === 'idle') aborted.delete(id); return; }
+        // opakování na Zen (limit free modelů je na IP a hodiny, čekání nepomůže) → hned zastavit a jít na tier Max
+        if (id && lastAsst.get(id)?.providerID === 'opencode' && !zenAborted.has(id)) {
+          zenAborted.add(id);
+          glog('zen-retry-abort', `relace ${id}: Zen opakuje (${st.message}) → zastavuji a pokračuji na tieru Max`, { session: id, attempt: st.attempt, message: st.message });
+          if (!zenFail.has(id)) zenFail.set(id, String(st.message || 'retry').slice(0, 200));
+          try { await ctx?.client?.session?.abort({ path: { id } }); } catch (e) { glog('retry-abort-error', `zastavení relace ${id} selhalo: ${e?.message || e}`, { session: id }); }
+          return;
+        }
         if (maxRetries > 0 && st.attempt >= maxRetries && id && !aborted.has(id)) {
           aborted.add(id);
           glog('retry-abort', `relace ${id}: pokus ${st.attempt} – zastavuji nekonečné opakování; důvod chyby: ${st.message}`, { session: id, attempt: st.attempt, message: st.message });

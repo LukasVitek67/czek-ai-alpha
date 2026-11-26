@@ -21,65 +21,17 @@ const keyOf = (p) => (typeof keys[p] === 'string' ? keys[p] : keys[p]?.key) || '
 // Který model plán napsal, je v hlavičce souboru; s --force se dá později přegenerovat.
 const CHAIN = [
   { provider: 'nvidia', base: 'https://integrate.api.nvidia.com/v1', model: 'z-ai/glm-5.3-flash' },
-  { provider: 'opencode', base: 'https://opencode.ai/zen/v1', model: 'deepseek-v4.1-flash-free' },
+  { provider: 'opencode', base: 'https://opencode.ai/inference/v1', model: 'deepseek-v4.1-flash-free' },
   { provider: 'gemini', base: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-3.1-pro-preview' },
   { provider: 'gemini', base: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-2.5-pro' },
   { provider: 'groq', base: 'https://api.groq.com/openai/v1', model: 'openai/gpt-oss-120b' },
   { provider: 'zai', base: 'https://api.z.ai/api/paas/v4', model: 'glm-4.7-flash' },
 ];
 
-const prompt = (p) => `You are writing the operating playbook that an AI coding agent will follow in every response of a chat dedicated to one kind of work.
-
-Kind of work: ${p.name.en}
-Goal: ${p.goal}
-
-The agent works inside a code editor on the user's Windows PC (Git Bash, Node.js, Git available) with these tools: read, edit, write, bash, glob, grep, task (sub-agents) and skill (loads a skill = expert instructions). There is no task-list tool. The user's request arrives in the chat (plus any files the user names). The following skills are loaded automatically at the start of this chat, so refer to them by their exact names where they help: ${p.skills.join(', ')}.
-
-What a skill is: a Markdown document with expert instructions that the agent reads with the skill tool and then follows. A skill is NOT an npm package, CSS file, library or shell command: never install, import or run a skill, and a skill never generates files, reviews code or reports results by itself - the agent does the work following its guidance.
-
-Be specific to this kind of work: name the concrete techniques, patterns, project structure, commands and checks an expert in this field would use. No generic advice that would fit any task.
-
-Hard constraints for the playbook:
-- Size the solution to the request: follow the existing project's stack and structure when there is one; for a new small task prefer the simplest fitting stack and never force a framework or build tooling that the request does not need.
-- Never push, deploy, publish, open pull requests or create remote repositories unless the user explicitly asks.
-- Only rely on tools that exist on such a PC; anything extra (for example lighthouse or axe) only via npx and only if it is clearly worth it. Never install anything globally (no npm install -g).
-- Do not assume a programming language or framework the kind of work does not imply; use the one the user, the assignment or the existing project uses.
-- Do not invent input files; never ask the user for things the agent can find out itself.${p.extra ? '\n- ' + p.extra : ''}
-- Use plain ASCII hyphens in names and commands.
-
-Write an imperative playbook in English (about 350-500 words) as Markdown with exactly these sections:
-## Goal of this mode
-(1-2 lines)
-## Plan
-(numbered steps from understanding the request to a verified, finished result; specific to this kind of work, not generic advice)
-## Quality bar
-(bullets: what great output looks like here; concrete and checkable)
-## Verify before saying done
-(bullets: concrete checks the agent must actually run or look at)
-## Avoid
-(bullets: the typical mistakes in this kind of work)
-
-Rules: no introduction or closing text, no model names, do not invent tools or skills, do not wrap the answer in a code block. Output only the Markdown.`;
-
-// Kontrola obsahu plánu (26. 11.: GPT-OSS napsal todowrite, „push to repo, live preview“, request.txt a skills
-// s nezlomitelnými pomlčkami). Plán jde do KAŽDÉHO dotazu presetu, chyba v něm zhorší každou odpověď.
-function check(text, p) {
-  const bad = [];
-  if (/todowrite|todo list tool|task list tool/i.test(text)) bad.push('todowrite (v czek-ai vypnutý)');
-  if (/git push|push (it |the code |changes )?to (the )?(repo|remote|github|origin)|deploy (it|to|the)|live preview url|vercel|netlify|gh pr create|open a pull request/i.test(text)) bad.push('push/nasazení bez pokynu');
-  if (/request\.txt|brief\.(txt|md)/i.test(text)) bad.push('vymyšlený vstupní soubor');
-  if (/npm (i|install|add)\b[^\n]*(\s-g\b|--global)|yarn global add/i.test(text)) bad.push('globální instalace');
-  const all = fs.readdirSync(path.join(root, 'skills')).filter((n) => fs.existsSync(path.join(root, 'skills', n, 'SKILL.md')));
-  // skill jako npm balíček / CSS import (26. 11.: „npm i unslop-ui impeccable …“, „@import "impeccable/typography.css"“)
-  const own = all.filter((n) => /^(czek-|impeccable$|unslop-ui$|modern-web-design$|ui-ux-pro-max$|app-debugging$)/.test(n));
-  const ownRe = own.map((n) => n.replace(/[-]/g, '\\-')).join('|');
-  if (new RegExp(`(npm (i|install|add)|pnpm add|yarn add)\\b[^\\n]*\\b(${ownRe})\\b`, 'i').test(text)) bad.push('instalace skillu jako npm balíčku');
-  if (new RegExp(`(@import|import\\s|require\\()[^\\n]*\\b(${ownRe})\\b`, 'i').test(text)) bad.push('import skillu jako knihovny');
-  // jména, která vypadají jako skill (czek-… nebo jméno přibaleného skillu s překlepem), ale neexistují
-  for (const m of text.matchAll(/`([a-z0-9]+(?:-[a-z0-9]+)+)`/g)) if (/^czek-/.test(m[1]) && !all.includes(m[1])) bad.push(`neexistující skill ${m[1]}`);
-  if (p.forbid) for (const re of p.forbid) if (new RegExp(re, 'i').test(text)) bad.push(`zakázané: ${re}`);
-  return [...new Set(bad)];
-}
+// zadání a kontrola plánu: src/presetGen.js (sdílí appka – vlastní presety uživatele)
+const { planPrompt, checkPlan } = require('../src/presetGen');
+const prompt = (p) => planPrompt({ name: p.name.en, goal: p.goal, skills: p.skills, extra: p.extra });
+const check = (text, p) => checkPlan(text, { forbid: p.forbid || [], requireSections: false });
 
 // Stream: přemýšlecí model (GLM 5.3) dlouho uvažuje → pevný limit ho zabil (240 s). Hlídá se nečinnost (90 s bez dat)
 // a celkový strop 10 min; bere se jen content, uvažování (reasoning_content) se jen počítá.

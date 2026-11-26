@@ -63,10 +63,10 @@ const PROVIDERS = [
   {
     id: 'opencode',
     name: 'OpenCode Zen',
-    baseUrl: 'https://opencode.ai/zen/v1',
+    baseUrl: 'https://opencode.ai/inference/v1', // 14. 10. 2026 přesunuto ze /zen/v1
     needsKey: true,
     keyUrl: 'https://opencode.ai/auth',
-    note: 'Free modely z OpenCode (Big Pickle, GLM, DeepSeek Flash, Nemotron…). Seznam je veřejný, volání chce tvůj API klíč z opencode.ai.',
+    note: 'Free modely z OpenCode (Big Pickle, GLM, DeepSeek Flash, Nemotron…). Bez klíče je czek-ai nabízí přímo v OpenCode (skupina OpenCode Zen, při limitu sama přejde na Max); klíč z opencode.ai je přidá i do tierlistů.',
     headers: (key) => ({ ...bearer(key) }),
     async listModels(key) {
       const j = await getJson(`${this.baseUrl}/models`, {});
@@ -253,7 +253,7 @@ const PROVIDERS = [
     baseUrl: 'https://api.kilo.ai/api/gateway',
     needsKey: false,
     keyUrl: 'https://kilo.ai',
-    note: 'Free modely brány Kilo Code bez klíče (asi 200 požadavků/hod na IP): Nemotron 3 Ultra 550B, Beam, openrouter/free… Nabídka se často mění.',
+    note: 'Free modely brány Kilo Code bez klíče (asi 200 požadavků/hod na IP): Nemotron 3 Ultra 550B, Beam, openrouter/free… Nabídka se často mění. Kilo uvádí, že vstupy free modelů může poskytovatel ukládat – nic citlivého.',
     headers: (key) => bearer(key),
     async listModels(key) {
       const j = await getJson(`${this.baseUrl}/models`, {});
@@ -690,7 +690,7 @@ function chatUrlOf(p, key) {
 
 // Anglické popisy a názvy pro okno nastavení (jazyk English). Česky zůstává `note` přímo u poskytovatele.
 const EN = {
-  opencode: ['Free models from OpenCode (Big Pickle, GLM, DeepSeek Flash, Nemotron…). The list is public; calls need your API key from opencode.ai.'],
+  opencode: ['Free models from OpenCode (Big Pickle, GLM, DeepSeek Flash, Nemotron…). Without a key czek-ai offers them directly in OpenCode (OpenCode Zen group, switches to Max on limit); a key from opencode.ai adds them to the tier lists too.'],
   openrouter: ['Models with the :free suffix. About 50 requests/day free, 1000/day after a $10 top-up.'],
   pollinations: ['Works without a key or sign-up (anonymous tier). Slower, smaller models; a good backup.'],
   groq: ['Very fast. Free tier without a card (~30 req/min, ~1000 req/day per model).'],
@@ -703,7 +703,7 @@ const EN = {
   sambanova: ['Fast large open models (DeepSeek, Llama, Qwen), free tier with limits.'],
   ovh: ['European provider, works without a key or sign-up: gpt-oss-120b, Qwen3.5 397B, Llama 3.3 70B… Without a key, since November 2026 only 1 request per model and IP per year (measured 20 Nov: header x-ratelimit-limit-year: 1, then 429 until 1 Jan) – practically a fallback only. With a key you pay for tokens.'],
   llm7: ['Works without a key (anonymously). A free token from llm7.io gives higher limits (~60 req/min, ~100k tokens/day). Only “turbo” tier models are free (gpt-oss 20B, Codestral, Nemotron 3 Nano…); “pro” models are paid.'],
-  kilo: ['Free models of the Kilo Code gateway without a key (about 200 requests/hour per IP): Nemotron 3 Ultra 550B, Beam, openrouter/free… The offer changes often.'],
+  kilo: ['Free models of the Kilo Code gateway without a key (about 200 requests/hour per IP): Nemotron 3 Ultra 550B, Beam, openrouter/free… The offer changes often. Kilo says free-model prompts may be logged by the provider – nothing sensitive.'],
   zai: ['Official GLM API from Z.ai. Free: GLM-4.7-Flash (200k context), GLM-4.5-Flash and GLM-4.6V-Flash (sees images); other GLM models are paid. Only 1 concurrent request. Use a Standard key (not the GLM Coding Plan).'],
   cloudflare: ['10,000 neurons per day free (gpt-oss-120b, Llama 4 Scout, Qwen3, GLM-4.7-Flash, Gemma 4…). Enter the key as “Account ID:API token”: in Cloudflare → Workers AI → Use REST API create a token and copy the Account ID too. Kimi, DeepSeek V4 and GLM 5 are paid here.'],
   cohere: ['Free trial key: 1000 calls per month, 20/min, non-commercial use only. Command A, Command R+, Aya.'],

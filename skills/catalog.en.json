@@ -553,6 +553,38 @@
       "what": "Combines impeccable, ui-ux-pro-max and unslop-ui with real browser checks: responsive, states, a11y, clean console.",
       "when": [],
       "examples": []
+    },
+    "hallmark": {
+      "badge": "design",
+      "summary": "new pages that look designed, not generated",
+      "what": "A hard floor against the defaults models fall into (tokens, no eyebrow labels, focus, reduced motion, capped container), a dealt design direction so consecutive sites do not look alike, 21 page macrostructures and the sloplint check that renders the result and finds problems. Also redesign and audit.",
+      "when": [
+        "You are building a new website, landing page or page from scratch.",
+        "You want the next site not to look like the last one.",
+        "You want a machine check for the \"AI look\" (sloplint)."
+      ],
+      "examples": [
+        "Use hallmark: a landing page for a corner café.",
+        "/hallmark redesign index.html",
+        "/hallmark audit site/"
+      ],
+      "needs": "sloplint needs Node (bundled with czek-ai). Image generation only with your own Together AI key (otherwise CSS art / placeholder)."
+    },
+    "security-audit": {
+      "badge": "security",
+      "summary": "security audit of code by Cloudflare: verified findings and fixes",
+      "what": "A defensive, source-first workflow: reconnaissance, hunting by attack class (web, auth, APIs, client side, desktop and IPC, AI/LLM, supply chain…), independent verification of every finding and a report with evidence, priority and the smallest fix. Guidance for questions; the full audit only when explicitly asked.",
+      "when": [
+        "Before handing in or deploying a project with login, an API or uploads.",
+        "You want to know whether code is vulnerable (injection, authorization, data leaks).",
+        "The teacher wants a security report."
+      ],
+      "examples": [
+        "Run a security audit of this project and list verified findings.",
+        "Is this login secure? Check it with security-audit.",
+        "Review the API endpoints for missing authorization."
+      ],
+      "needs": "Report validators run on Node (bundled with czek-ai). Nothing to install."
     }
   }
 }

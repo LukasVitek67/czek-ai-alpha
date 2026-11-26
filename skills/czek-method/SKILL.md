@@ -29,12 +29,14 @@ description: Always-on working method of czek-ai (how a senior engineer like Cla
 | cleanup, restructure, rename, split a big file | `czek-refactor` |
 | slow, optimize, faster, memory, performance | `czek-performance` |
 | login, passwords, keys, user input, uploads, SQL, auth | `czek-security` |
+| security audit, pen test, "is it secure", vulnerability review | `security-audit`, `czek-security` |
 | commit, branch, merge, PR, git trouble | `czek-git` |
 | new project, scaffold, "make an app/website/game" | `czek-new-project` |
 | unknown library/API/framework, version questions | `czek-research` |
 | any UI: web page, app screen, component, CSS, layout | `czek-frontend`, `impeccable`, `ui-ux-pro-max` |
 | UI looks generic / "AI slop" / needs polish | `unslop-ui`, `impeccable` |
 | landing page, portfolio, marketing site | `modern-web-design`, `ui-ux-pro-max` |
+| new website / page from scratch, "make it not look AI-made" | `hallmark` |
 | animation in React | `motion-framer` or `react-spring-physics` |
 | scroll effects / scroll animation | `gsap-scrolltrigger`, `scroll-reveal-libraries`, `locomotive-scroll` |
 | 3D on the web | `threejs-webgl` or `react-three-fiber`; light effects `lightweight-3d-effects` |

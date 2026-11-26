@@ -80,12 +80,18 @@
             <h2><span data-i18n="wiz.title">Průvodce klíči</span> <span class="muted small" id="wizProgress"></span></h2>
             <p class="muted" id="wizIntro"></p>
             <ol class="wiz-dots" id="wizDots"></ol>
+            <div class="wiz-vault"><span data-i18n="vault.wizHint">Klíče už máš na jiném zařízení?</span> <button id="wizVault" class="btn small" data-i18n="vault.wizGo">Zadat kód z jiného zařízení</button></div>
             <div id="wizCard"></div>
             <p class="muted small" data-i18n="wiz.terms"></p>
           </section>
         </div>
 
         <div class="page" data-page="providers">
+          <section id="vaultSection">
+            <h2 data-i18n="vault.title">Klíče na více zařízeních</h2>
+            <p class="muted" data-i18n="vault.intro"></p>
+            <div id="vaultBox"></div>
+          </section>
           <section id="providersSection">
             <h2><span data-i18n="prov.title">Poskytovatelé a API klíče</span> <span class="muted small" id="provCount"></span></h2>
             <div class="prov" style="margin-bottom: 12px;">

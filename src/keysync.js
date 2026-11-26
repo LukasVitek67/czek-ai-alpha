@@ -40,8 +40,12 @@ function write(file, settings) {
 
 /** Doplní do nastavení klíče ze souboru, které tu chybí. Vrací seznam doplněných id. */
 function merge(file, settings) {
-  const j = read(file);
-  if (!j) return [];
+  return mergeObject(read(file), settings);
+}
+
+/** Doplní do nastavení klíče z objektu ve formátu toExport (soubor, sdílená schránka src/keyVault.js). */
+function mergeObject(j, settings) {
+  if (!j || typeof j !== 'object') return [];
   const got = [];
   settings.providers = settings.providers || {};
   for (const [id, key] of Object.entries(j.providers || {})) {
@@ -90,4 +94,4 @@ function findRepoFile(roots) {
   return null;
 }
 
-module.exports = { toExport, read, write, merge, findRepoFile, FORMAT };
+module.exports = { toExport, read, write, merge, mergeObject, findRepoFile, FORMAT };

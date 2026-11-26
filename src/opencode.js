@@ -477,13 +477,73 @@ function installGuard() {
   const src = path.join(__dirname, 'guard');
   const dst = GUARD_DIR();
   fs.mkdirSync(dst, { recursive: true });
-  for (const f of ['index.mjs', 'guard-core.mjs', 'autocheck.mjs', 'search.mjs', 'launch.mjs', 'look.mjs', 'look.ps1', 'presets.mjs']) {
+  for (const f of ['index.mjs', 'guard-core.mjs', 'autocheck.mjs', 'search.mjs', 'launch.mjs', 'look.mjs', 'look.ps1', 'presets.mjs', 'teacher.mjs']) {
     const body = fs.readFileSync(path.join(src, f), 'utf8');
     let cur = null;
     try { cur = fs.readFileSync(path.join(dst, f), 'utf8'); } catch {}
     if (cur !== body) fs.writeFileSync(path.join(dst, f), body);
   }
+  copyTeacherKit();
   return path.join(dst, 'index.mjs').split(path.sep).join('/');
+}
+// Pravidla učitele (Agentic Starter Kit, src/teacher-kit = kopie repa učitele bez .claude/): soubory pro OpenCode
+// vedle pluginu (z app.asar je OpenCode číst neumí), stav po relacích v teacher.json (čte guard: src/guard/teacher.mjs),
+// vstupní příkazy kitu jako příkazy OpenCode (/bootstrap-agentic-environment, /discover-project, /plan-increment,
+// /work-task). Uživatel 26. 11.: přepínač, ne vynucení – výchozí stav pro nové chaty je vypnuto.
+const TEACHER_SRC = path.join(__dirname, 'teacher-kit');
+const TEACHER_DIR = () => path.join(GUARD_DIR(), 'teacher-kit');
+const TEACHER_MARK = 'Pravidla učitele:';
+// veřejné alpha repo kit učitele nemá (bez licence, tools/make-public.sh) → funkce se tam vypne celá
+const teacherAvailable = () => fs.existsSync(path.join(TEACHER_SRC, 'commands'));
+function copyTeacherKit() {
+  const walk = (src, dst) => {
+    let ents = [];
+    try { ents = fs.readdirSync(src, { withFileTypes: true }); } catch { return; }
+    fs.mkdirSync(dst, { recursive: true });
+    for (const e of ents) {
+      const s = path.join(src, e.name), d = path.join(dst, e.name);
+      if (e.isDirectory()) { walk(s, d); continue; }
+      const body = fs.readFileSync(s, 'utf8');
+      let cur = null;
+      try { cur = fs.readFileSync(d, 'utf8'); } catch {}
+      if (cur !== body) fs.writeFileSync(d, body);
+    }
+  };
+  try { walk(TEACHER_SRC, TEACHER_DIR()); } catch {}
+}
+/** teacher.json pro guard: { kitDir, default, sessions, pending }; on === false = smazat (funkce vypnutá). */
+function writeTeacherState(state, on = true) {
+  const file = path.join(GUARD_DIR(), 'teacher.json');
+  try {
+    if (!on) { fs.rmSync(file, { force: true }); return; }
+    fs.mkdirSync(GUARD_DIR(), { recursive: true });
+    const sessions = Object.fromEntries(Object.entries(state?.sessions || {}).filter(([k, v]) => /^[\w-]{4,80}$/.test(k) && typeof v === 'boolean').slice(-500));
+    fs.writeFileSync(file, JSON.stringify({ kitDir: TEACHER_DIR(), default: state?.default === true, sessions, pending: state?.pending || null }, null, 1) + '\n');
+  } catch {}
+}
+/** Vstupní příkazy kitu jako příkazy OpenCode (naše poznáme podle začátku popisu). */
+function applyTeacher(cfg, on, state) {
+  const cmds = cfg.command && typeof cfg.command === 'object' ? { ...cfg.command } : {};
+  for (const [k, v] of Object.entries(cmds)) if (typeof v?.description === 'string' && v.description.startsWith(TEACHER_MARK)) delete cmds[k];
+  if (on) {
+    const dir = TEACHER_DIR();
+    const tpl = path.join(dir, 'templates', 'agentic') + path.sep;
+    const cmdDir = path.join(dir, 'commands') + path.sep;
+    let files = [];
+    try { files = fs.readdirSync(path.join(TEACHER_SRC, 'commands')).filter((f) => f.endsWith('.md')); } catch {}
+    for (const f of files) {
+      const name = f.replace(/\.md$/, '');
+      if (cmds[name]) continue; // vlastní příkaz uživatele se stejným jménem nepřepisujeme
+      const raw = fs.readFileSync(path.join(TEACHER_SRC, 'commands', f), 'utf8').replace(/\r\n/g, '\n');
+      const fm = raw.match(/^---\n([\s\S]*?)\n---\n?/);
+      const desc = (fm?.[1].match(/^description:\s*(.+)$/m)?.[1] || name).trim().replace(/^['"]|['"]$/g, '');
+      const body = fm ? raw.slice(fm[0].length) : raw;
+      const note = "(czek-ai: the teacher's Agentic Starter Kit is installed at " + dir + ". The kit's `.claude/templates/agentic/<file>` is `" + tpl + "<file>` and the kit's `.claude/commands/<file>` is `" + cmdDir + "<file>`. The user ran this command explicitly, so follow it even if the teacher's rules are switched off for this chat.)\n\n";
+      cmds[name] = { template: note + body.trim() + '\n', description: `${TEACHER_MARK} ${desc}` };
+    }
+  }
+  if (Object.keys(cmds).length) cfg.command = cmds; else delete cfg.command;
+  writeTeacherState(state, on);
 }
 // Chytré zkracování kontextu: hotový plugin Dynamic Context Pruning (@tarquinen/opencode-dcp, AGPL-3.0,
 // instaluje si ho OpenCode sám z npm; verze je připnutá). Průběžně zahazuje zastaralé a duplicitní výstupy
@@ -548,6 +608,18 @@ function applyRouted(cfg, ids) {
   if (hidden(cfg.small_model)) cfg.small_model = SMALL_MODEL;
 }
 
+// Vestavěný poskytovatel Zen: limit mezi kusy streamu (výchozí OpenCode 300 s → 9. 11. chat visel 69 min).
+const ZEN_CHUNK_MS = 60000;
+function applyZen(cfg, on) {
+  const prov = cfg.provider && typeof cfg.provider === 'object' ? { ...cfg.provider } : {};
+  const cur = prov.opencode && typeof prov.opencode === 'object' ? { ...prov.opencode } : null;
+  const opts = { ...(cur?.options || {}) };
+  if (on) opts.chunkTimeout = ZEN_CHUNK_MS; else if (opts.chunkTimeout === ZEN_CHUNK_MS) delete opts.chunkTimeout;
+  const next = { ...(cur || {}) };
+  if (Object.keys(opts).length) next.options = opts; else delete next.options;
+  if (Object.keys(next).length) prov.opencode = next; else delete prov.opencode;
+  if (Object.keys(prov).length) cfg.provider = prov; else delete cfg.provider;
+}
 function applyGuard(cfg, on) {
   const isGuard = (p) => String(Array.isArray(p) ? p[0] : p).includes('czek-guard');
   const list = Array.isArray(cfg.plugin) ? cfg.plugin.filter((p) => !isGuard(p)) : [];
@@ -562,24 +634,38 @@ function applyGuard(cfg, on) {
 // podle začátku popisu; agenta uživatele se stejným jménem nepřepíšeme.
 const PRESET_MARK = 'czek-ai preset:';
 const PRESETS_DIR = path.join(__dirname, 'presets');
-/** Presety ze src/presets: jméno/popis v jazyce lang, plán z <id>.md bez úvodního komentáře generátoru (null = bez plánu). */
-function presetsData(lang = 'cs') {
+// Vlastní presety uživatele (settings.customPresets, editor ve výběru v nové relaci): agent `my-…`, plán povinný.
+const CUSTOM_ID = /^my-[a-z0-9-]{1,40}$/;
+function customPresets(list) {
+  return (Array.isArray(list) ? list : []).filter((p) => p && CUSTOM_ID.test(p.id || '') && typeof p.plan === 'string' && p.plan.trim()).slice(0, 24).map((p) => ({
+    id: p.id, agent: p.id, color: /^#[0-9a-f]{6}$/i.test(p.color || '') ? p.color : '#8A8F98', icon: null,
+    name: String(p.name || p.id).slice(0, 40), tag: String(p.tag || '').slice(0, 40), desc: String(p.desc || '').slice(0, 160),
+    nameEn: String(p.name || p.id).slice(0, 40), descEn: String(p.desc || '').slice(0, 160),
+    skills: (Array.isArray(p.skills) ? p.skills : []).filter((x) => /^[a-z0-9][a-z0-9-]{0,63}$/.test(x)).slice(0, 12), plan: p.plan.trim().slice(0, 12000), custom: true,
+  }));
+}
+/** Presety ze src/presets (+ vlastní před obecným chatem): jméno/popis v jazyce lang, plán z <id>.md (null = bez plánu). */
+function presetsData(lang = 'cs', custom = []) {
   let spec;
-  try { spec = JSON.parse(fs.readFileSync(path.join(PRESETS_DIR, 'presets.json'), 'utf8')); } catch { return []; }
+  try { spec = JSON.parse(fs.readFileSync(path.join(PRESETS_DIR, 'presets.json'), 'utf8')); } catch { spec = { presets: [] }; }
   const t = (o, id) => (o && (o[lang] || o.cs || o.en)) || id;
-  return (Array.isArray(spec.presets) ? spec.presets : []).filter((p) => p && /^[a-z0-9-]+$/.test(p.id || '') && /^[a-z0-9-]+$/.test(p.agent || '')).map((p) => {
+  const out = (Array.isArray(spec.presets) ? spec.presets : []).filter((p) => p && /^[a-z0-9-]+$/.test(p.id || '') && /^[a-z0-9-]+$/.test(p.agent || '')).map((p) => {
     let plan = null;
     if (p.goal) { try { plan = fs.readFileSync(path.join(PRESETS_DIR, p.id + '.md'), 'utf8').replace(/^\s*<!--[\s\S]*?-->\s*/, '').trim() || null; } catch {} }
     return { id: p.id, agent: p.agent, color: p.color || null, icon: p.icon || null, name: t(p.name, p.id), tag: t(p.tag, ''), desc: t(p.desc, ''), nameEn: p.name?.en || p.id, descEn: p.desc?.en || '', skills: Array.isArray(p.skills) ? p.skills : [], plan };
   });
+  const mine = customPresets(custom).filter((c) => !out.some((p) => p.agent === c.agent));
+  const gi = out.findIndex((p) => p.agent === 'build');
+  if (gi < 0) return [...out, ...mine];
+  return [...out.slice(0, gi), ...mine, ...out.slice(gi)];
 }
 /** Zapíše primární agenty presetů a presets.json pro guard; available = povolené skills (Set) nebo null. Vrátí agenty. */
-function applyPresets(cfg, on, available = null) {
+function applyPresets(cfg, on, available = null, custom = []) {
   const agents = cfg.agent && typeof cfg.agent === 'object' ? { ...cfg.agent } : {};
   for (const [k, v] of Object.entries(agents)) if (typeof v?.description === 'string' && v.description.startsWith(PRESET_MARK)) delete agents[k];
   const data = {};
   if (on) {
-    for (const p of presetsData('en')) {
+    for (const p of presetsData('en', custom)) {
       if (!p.plan || p.agent === 'build' || p.agent === 'plan' || agents[p.agent]) continue;
       agents[p.agent] = { mode: 'primary', description: `${PRESET_MARK} ${p.nameEn} – ${p.descEn}` };
       data[p.agent] = { id: p.id, name: p.nameEn, skills: available ? p.skills.filter((s) => available.has(s)) : p.skills, plan: p.plan };
@@ -636,9 +722,15 @@ function writeConfig(port, models, o = {}) {
     // při limitu ani hlídání zaseknutého streamu. 9. 11. na něm chat 69 min visel v půlce zápisu souboru
     // a OmniRoute nedostal jediný dotaz. Proto je v nabídce skrytý (o.builtinFree === true ho vrátí).
     // Poskytovatele, které si uživatel sám připojil v OpenCode, se to netýká.
+    // 26. 11. (uživatel: „silně implementuj dsh-our-free-model“): Zen pustí free modely JEN skutečnému klientovi
+    // OpenCode (jiný klient: „Free models work in OpenCode“ – dsh se proto za OpenCode vydává, czek-ai ne; czek-ai
+    // OpenCode JE). Bez přihlášení OpenCode nabízí jen free modely Zen (9 ks: DeepSeek V4.1 Flash, GLM 5.3 Flash,
+    // Nemotron 3 Ultra, Big Pickle…). Ochrany proti 9. 11.: chunkTimeout utne zaseknutý stream (60 s bez dat místo
+    // 5 min) a czek-guard po limitu/chybě Zen pokračuje sám na tieru Max (guard: zenFallback).
     const dis = new Set(Array.isArray(cfg.disabled_providers) ? cfg.disabled_providers : []);
     if (o.builtinFree === true) dis.delete('opencode'); else dis.add('opencode');
     if (dis.size) cfg.disabled_providers = [...dis]; else delete cfg.disabled_providers;
+    applyZen(cfg, o.builtinFree === true);
     applyRouted(cfg, o.routed);
     const isOurs = (v) => !v || /^(zdarma|omniroute)\//.test(v) || (o.builtinFree !== true && /^opencode\//.test(v));
     if (isOurs(cfg.model)) cfg.model = DEFAULT_MODEL;
@@ -694,7 +786,9 @@ function writeConfig(port, models, o = {}) {
   applySnapshot(cfg, o.snapshotOff ?? !!homeInGit());
   applyGuard(cfg, o.guard !== false);
   // presety jen s guardem (plán a skills do promptu přidává on); o.presets === false = vypnuto
-  applyPresets(cfg, o.guard !== false && o.presets !== false, Array.isArray(o.skillsAllow) ? new Set(o.skillsAllow) : null);
+  applyPresets(cfg, o.guard !== false && o.presets !== false, Array.isArray(o.skillsAllow) ? new Set(o.skillsAllow) : null, o.customPresets);
+  // pravidla učitele (přepínač po relacích čte guard) – jen s guardem; o.teacher === false = vypnuto
+  applyTeacher(cfg, o.guard !== false && o.teacher !== false && teacherAvailable(), o.teacherState);
   applyDcp(cfg, o.dcp !== false);
   applyTodo(cfg, o.todo === true);
   // Pokyny pro agenta (soubor vedle konfigurace, cesta v "instructions"); o.agentTips === false = vypnuto
@@ -769,4 +863,4 @@ function isConfigured(port, omniUrl) {
   } catch { return false; }
 }
 
-module.exports = { PRESET_MARK, presetsData, applyPresets, AUTO_CONTEXT, COMBO_OUTPUT, DEFAULT_MODEL, SMALL_MODEL, writeConfig, isConfigured, installOmniPlugin, writeOmniAuth, clearOmniPluginCache, providerBlock, modelEntries, tierEntries, unitedEntries, leanVisible, provenModelKeys, CONFIG_FILE, AUTH_FILE, PLUGIN_DIR, FULL_AUTO, PERM_BACKUP, homeInGit, SNAP_MARK, AGENT_TIPS, AGENT_TIPS_FILE, GUARD_DIR, ROUTED_FILE, CAVEMAN_FILE, cavemanInstructions, METHOD_FILE, methodInstructions, SYSTEM_FILE, systemContext };
+module.exports = { PRESET_MARK, presetsData, applyPresets, customPresets, CUSTOM_ID, applyZen, ZEN_CHUNK_MS, applyTeacher, writeTeacherState, TEACHER_DIR, TEACHER_MARK, teacherAvailable, AUTO_CONTEXT, COMBO_OUTPUT, DEFAULT_MODEL, SMALL_MODEL, writeConfig, isConfigured, installOmniPlugin, writeOmniAuth, clearOmniPluginCache, providerBlock, modelEntries, tierEntries, unitedEntries, leanVisible, provenModelKeys, CONFIG_FILE, AUTH_FILE, PLUGIN_DIR, FULL_AUTO, PERM_BACKUP, homeInGit, SNAP_MARK, AGENT_TIPS, AGENT_TIPS_FILE, GUARD_DIR, ROUTED_FILE, CAVEMAN_FILE, cavemanInstructions, METHOD_FILE, methodInstructions, SYSTEM_FILE, systemContext };

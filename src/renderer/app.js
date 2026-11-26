@@ -1000,6 +1000,49 @@ function showKeysFile(st) {
   $('#kfState').textContent = txt.trim();
 }
 window.api.keysFile().then(showKeysFile).catch(() => {});
+// klíče na více zařízeních (src/keyVault.js): jeden kód, šifrováno v appce
+function renderVault(st, msg) {
+  const box = $('#vaultBox');
+  if (!box) return;
+  box.replaceChildren();
+  const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const btn = (key, fn, cls = 'btn small') => { const b = mk('button', cls, t(key)); b.onclick = async () => { b.disabled = true; try { await fn(); } finally { b.disabled = false; } }; return b; };
+  const status = mk('div', 'muted small');
+  const after = async (r) => {
+    S.settings = await window.api.getSettings(); renderProviders(); renderCustom();
+    renderVault(await window.api.vault('get'), r && r.ok === false ? (r.error || '') : r?.imported?.length ? t('vault.imported', { list: r.imported.join(', ') }) : (r?.msg || ''));
+  };
+  if (st.linked) {
+    const row = mk('div', 'vault-row');
+    const code = mk('span', 'vault-code', '••••-••••-••••-••••-••••');
+    let shown = false;
+    const show = btn('vault.show', () => { shown = !shown; code.textContent = shown ? st.code : '••••-••••-••••-••••-••••'; show.textContent = t(shown ? 'vault.hide' : 'vault.show'); });
+    row.append(mk('span', null, t('vault.linked')), code, show, btn('vault.copy', async () => { await window.api.copyText(st.code); status.textContent = t('vault.copied'); }));
+    const row2 = mk('div', 'vault-row');
+    row2.append(btn('vault.syncNow', async () => after(await window.api.vault('sync'))), btn('vault.unlink', async () => after(await window.api.vault('unlink', false))),
+      btn('vault.wipe', async () => { if (confirm(t('vault.wipeConfirm'))) after(await window.api.vault('unlink', true)); }));
+    box.append(row, row2, mk('p', 'muted small vault-warn', t('vault.warn')));
+    const when = st.at ? new Date(st.at).toLocaleString(I18N.lang === 'en' ? 'en-GB' : 'cs-CZ') : '';
+    status.textContent = msg || (st.error ? st.error : when ? t('vault.lastSync', { when }) : '');
+  } else {
+    const row = mk('div', 'vault-row');
+    row.append(btn('vault.create', async () => after(await window.api.vault('create')), 'btn small primary'));
+    const row2 = mk('div', 'vault-row');
+    const inp = mk('input'); inp.type = 'text'; inp.placeholder = 'XXXX-XXXX-XXXX-XXXX-XXXX'; inp.spellcheck = false; inp.autocomplete = 'off'; inp.maxLength = 32;
+    inp.setAttribute('aria-label', t('vault.codeLabel'));
+    row2.append(mk('span', null, t('vault.haveCode')), inp, btn('vault.join', async () => after(await window.api.vault('join', inp.value))));
+    const row3 = mk('div', 'vault-row');
+    row3.append(btn('vault.toFile', async () => { const r = await window.api.vault('exportFile'); if (r?.ok) status.textContent = t('vault.fileSaved', { code: r.code }); }),
+      btn('vault.fromFile', async () => { const r = await window.api.vault('importFile', inp.value); if (r?.ok) after({ imported: r.imported, msg: t('vault.fileNone') }); else if (r?.error) status.textContent = r.error; }));
+    box.append(row, row2, mk('p', 'muted small vault-or', t('vault.fileIntro')), row3, mk('p', 'muted small vault-warn', t('vault.warn')));
+    status.textContent = msg || '';
+  }
+  status.setAttribute('aria-live', 'polite');
+  box.append(status);
+}
+window.api.vault('get').then((st) => renderVault(st)).catch(() => {});
+$('#wizVault')?.addEventListener('click', () => { showPage('providers'); $('#vaultSection')?.scrollIntoView({ block: 'start' }); setTimeout(() => $('#vaultBox input')?.focus(), 50); });
+window.api.onKeysChanged?.(async () => { S.settings = await window.api.getSettings(); renderProviders(); renderCustom(); renderVault(await window.api.vault('get')); });
 $('#kfPick').onclick = async () => { showKeysFile(await window.api.keysFilePick()); S.settings = await window.api.getSettings(); renderProviders(); renderCustom(); };
 $('#kfSync').onclick = async () => { showKeysFile(await window.api.keysFileSync()); S.settings = await window.api.getSettings(); renderProviders(); renderCustom(); };
 $('#optProxy').onchange = async (e) => { S.settings = await window.api.setSettings({ proxy: e.target.checked }); };

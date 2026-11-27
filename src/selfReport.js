@@ -37,6 +37,8 @@ const CLASS_LABEL = {
 function mask(text) {
   let s = text;
   for (const re of KEY_RES) s = s.replace(re, (m) => m.slice(0, 6) + '***');
+  // přihlašovací údaje v URL (ftp://uživatel:heslo@…): 27. 11. heslo k FTP z příkazu agenta skončilo v reportu
+  s = s.replace(/([a-z][a-z0-9+.-]*:\/\/[^\s:/@"'<>]+:)[^\s@/"'<>]+@/gi, '$1***@');
   return s;
 }
 

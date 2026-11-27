@@ -15,6 +15,8 @@ const KEY_RES = [
   /sk-or-v1-[A-Za-z0-9]{20,}/g, /sk-ant-[A-Za-z0-9_-]{20,}/g, /sk-[A-Za-z0-9_-]{20,}/g, /nvapi-[A-Za-z0-9_-]{20,}/g,
   /gsk_[A-Za-z0-9]{20,}/g, /AIza[A-Za-z0-9_-]{30,}/g, /hf_[A-Za-z0-9]{20,}/g, /gh[pousr]_[A-Za-z0-9]{20,}/g,
   /github_pat_[A-Za-z0-9_]{20,}/g, /xai-[A-Za-z0-9]{20,}/g, /csk-[A-Za-z0-9]{20,}/g,
+  // přihlašovací údaje v URL (ftp://uživatel:heslo@…) → „ftp://***“ (27. 11. heslo k FTP z příkazu agenta)
+  /[a-z][a-z0-9+.-]*:\/\/[^\s:/@"'<>]+:[^\s@/"'<>]+@/gi,
 ];
 
 const day = (t = Date.now()) => new Date(t).toISOString().slice(0, 10);

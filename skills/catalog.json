@@ -62,6 +62,10 @@
     "hallmark": {
       "url": "https://github.com/nutlope/hallmark",
       "license": "MIT"
+    },
+    "vgpu": {
+      "url": "https://github.com/vercel-labs/vgpu",
+      "license": "MIT"
     }
   },
   "skills": [
@@ -367,6 +371,26 @@
         "Udělej parallax pozadí v hero sekci."
       ],
       "needs": "Balíček gsap do projektu."
+    },
+    {
+      "name": "vgpu",
+      "group": "3d",
+      "impact": 86,
+      "badge": "WebGPU",
+      "source": "vgpu",
+      "summary": "WebGPU efekty od Vercelu: shader hero, holografická karta, tekuté sklo, částice",
+      "what": "Knihovna vgpu (Vercel Labs) pro WebGPU: shadery ve WGSL, celostránkové efekty, částice, sklo, kapaliny, 3D scény. Skill vede agenta k dokumentaci a ukázkám přímo z nainstalované verze (vgpu docs, vgpu examples – zdroják ukázek z vgpu.sh/examples), takže nevymýšlí API. Hodí se na jeden výrazný efekt webu se zálohou pro prohlížeče bez WebGPU.",
+      "when": [
+        "Chceš na webu výrazný efekt: shader v pozadí hero, holografickou kartu, tekuté sklo, galaxii z částic.",
+        "Interaktivní efekt na myš nebo dotyk (kapalina, světlo).",
+        "Testy shaderů bez GPU (vgpu/mock)."
+      ],
+      "examples": [
+        "Udělej hero s jemným WebGPU shaderem v pozadí podle vgpu, se zálohou pro starší prohlížeče.",
+        "Použij vgpu ukázku Holographic Card na kartu projektu v portfoliu.",
+        "Karty projektů jako tekuté sklo (vgpu Liquid Layout)."
+      ],
+      "needs": "npm balíček vgpu do projektu (agent ho přidá sám). WebGPU má Chrome/Edge a novější Safari/Firefox – web musí mít zálohu."
     },
     {
       "name": "threejs-webgl",

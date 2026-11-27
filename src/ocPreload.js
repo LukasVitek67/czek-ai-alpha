@@ -952,9 +952,71 @@ function initVscodeInsert() {
   });
 }
 
+// ------------------------------------------------------------ Prázdné okno (uživatel 27. 11.: „neloaduje ui“)
+// Stránka OpenCode bez obsahu: po 12 s stav „OpenCode se načítá…“ s tlačítky, po 45 s jednou sama obnova (main: oc:blank
+// → znovu načíst, nebo restart serveru, když neodpovídá). Zmizí, jakmile se obsah objeví.
+const BLANK_CSS = `[data-czek-blank]{position:fixed;inset:0;z-index:60;display:grid;place-items:center;pointer-events:none}
+[data-czek-blank] .cb-card{pointer-events:auto;box-sizing:border-box;width:min(420px,calc(100vw - 32px));padding:18px 20px;border-radius:10px;background:var(--surface-raised-base,#161616);color:var(--text-base,#a0a0a0);font:13px/1.5 Inter,ui-sans-serif,system-ui,sans-serif;box-shadow:0 0 0 .5px color-mix(in srgb,var(--text-strong,#ededed) 18%,transparent),0 16px 40px rgba(0,0,0,.35)}
+[data-czek-blank] .cb-title{margin:0 0 4px;font-size:14px;font-weight:500;color:var(--text-strong,#ededed)}
+[data-czek-blank] .cb-hint{margin:0 0 14px}
+[data-czek-blank] .cb-row{display:flex;gap:8px;flex-wrap:wrap}
+[data-czek-blank] button{all:unset;box-sizing:border-box;height:30px;padding:0 12px;border-radius:7px;font-size:12.5px;font-weight:500;cursor:pointer;color:var(--text-strong,#ededed);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--text-strong,#ededed) 16%,transparent)}
+[data-czek-blank] button.cb-primary{background:var(--text-strong,#ededed);color:var(--surface-raised-base,#161616);box-shadow:none}
+[data-czek-blank] button:focus-visible{outline:2px solid var(--text-strong,#ededed);outline-offset:2px}
+[data-czek-blank] button[disabled]{opacity:.55;cursor:progress}`;
+function initBlankWatch() {
+  const start = Date.now();
+  let card = null; let auto = false; let busy = false;
+  // obsah OpenCode bez vlastních prvků czek-ai (tento stav, přehrávač, lišty) – jinak by se stav sám „vyplnil“ a blikal
+  // noscript: jeho text („You need to enable JavaScript…“) innerText vrací, i když se nekreslí → prázdná stránka by nebyla prázdná
+  const OWN = 'script,style,noscript,[data-czek-blank],[data-czek-video],[data-czek-upgrade],[data-czek-teacher],dialog[data-czek-cpe]';
+  const empty = () => {
+    const b = document.body;
+    if (!b) return true;
+    const vis = (e) => (typeof e.checkVisibility === 'function' ? e.checkVisibility({ checkVisibilityCSS: true }) : !!e.getClientRects().length);
+    const pb = document.querySelector('[aria-label="Prompt"], form [contenteditable="true"]');
+    if (pb && vis(pb)) return false;
+    // viditelný text mimo vlastní prvky: textové uzly + checkVisibility (innerText u nerozkresleného okna vrací i skrytý text)
+    const tw = document.createTreeWalker(b, NodeFilter.SHOW_TEXT, { acceptNode: (t) => (t.parentElement && !t.parentElement.closest(OWN) && t.nodeValue.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT) });
+    let n = 0;
+    for (let t = tw.nextNode(); t; t = tw.nextNode()) { if (vis(t.parentElement)) { n += t.nodeValue.replace(/\s+/g, '').length; if (n >= 5) return false; } }
+    return true;
+  };
+  const act = async (action, btn) => {
+    if (busy) return;
+    busy = true; if (btn) btn.disabled = true;
+    try { await ipcRenderer.invoke('oc:blank', { action, seconds: since ? (Date.now() - since) / 1000 : 0 }); } catch {}
+    setTimeout(() => { busy = false; if (btn) btn.disabled = false; }, 4000);
+  };
+  const show = (secs) => {
+    if (!card) {
+      const st = document.createElement('style'); st.textContent = BLANK_CSS; document.head.append(st);
+      card = el('div'); card.setAttribute('data-czek-blank', ''); card.setAttribute('role', 'status');
+      const box = el('div', 'cb-card');
+      const title = el('p', 'cb-title'); const hint = el('p', 'cb-hint', T('oc.blankHint'));
+      const row = el('div', 'cb-row');
+      const reload = el('button', 'cb-primary', T('oc.blankReload')); reload.type = 'button'; reload.addEventListener('click', () => act('reload', reload));
+      const restart = el('button', null, T('oc.blankRestart')); restart.type = 'button'; restart.addEventListener('click', () => act('restart', restart));
+      row.append(reload, restart); box.append(title, hint, row); card.append(box);
+      document.body.append(card);
+    }
+    card.querySelector('.cb-title').textContent = T('oc.blankTitle', { s: secs });
+  };
+  // čas se počítá od chvíle, kdy je stránka v kuse prázdná (zbělat může i později, ne jen při načtení)
+  let since = 0;
+  const tick = () => {
+    if (!empty()) { since = 0; auto = false; card?.remove(); card = null; return; }
+    if (!since) since = Date.now();
+    const secs = Math.round((Date.now() - since) / 1000);
+    if (secs >= 12) show(secs);
+    if (secs >= 45 && !auto) { auto = true; act('auto'); }
+  };
+  setInterval(tick, 1000);
+}
+
 // každá část zvlášť: chyba jedné (např. v prohlížeči přes most bez Electronu) nesmí vypnout ostatní
 window.addEventListener('DOMContentLoaded', () => {
-  for (const f of [initLimits, initActive, initModelPopupBar, initNoModelsWatch, initVideoDock, initUpgradeBar, initPresetPicker, initTeacherSwitch, initVscodeInsert]) {
+  for (const f of [initLimits, initActive, initModelPopupBar, initNoModelsWatch, initVideoDock, initUpgradeBar, initPresetPicker, initTeacherSwitch, initVscodeInsert, initBlankWatch]) {
     try { f(); } catch (e) { try { console.error('[czek-ai]', f.name, e); window.__czekErr = `${f.name}: ${e && e.message}`; } catch {} }
   }
 });

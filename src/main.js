@@ -1,5 +1,5 @@
 'use strict';
-const { app, BrowserWindow, ipcMain, dialog, shell, safeStorage, nativeTheme, Menu, session, Notification } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, safeStorage, nativeTheme, Menu, session, Notification, powerMonitor } = require('electron');
 // Webový most pro VS Code (src/webBridge.js): stejné obsluhy IPC jako okno OpenCode, volané přes HTTP s falešnou událostí.
 const { BRIDGE_SENDER } = require('./webBridge');
 const bridgeHandlers = new Map(); const bridgeSync = new Map();
@@ -143,10 +143,13 @@ function watchWindow(w, name) {
     if (process.env.ZDARMA_DEBUG || lv === 'error' || lv === 3) logLine(`[${name}] console(${lv})`, String(m).slice(0, 500));
     else if (fullLog) fullLog.write(name, 'console', `Konzole okna ${name} (${lv}): ${m}`, { level: lv, message: String(m), line: e?.lineNumber, source: e?.sourceId });
     if (name === 'opencode') recoverOpencode(m); // jednorázový reload okna po pádu markdown workeru
+    // 27. 11.: po probuzení PC bez sítě „Failed to finish bootstrap instance“ → web zůstal bílý (uživatel: „neloaduje ui“)
+    if (name === 'opencode' && /Failed to finish bootstrap instance/i.test(String(m))) setTimeout(() => recoverBlank('bootstrap selhal').catch(() => {}), 6000);
   });
   w.webContents.on('did-navigate', (_e, url) => { if (fullLog) fullLog.write(name, 'navigate', `Okno ${name} načetlo ${url}`, { url }); });
   w.webContents.on('did-navigate-in-page', (_e, url) => { if (fullLog) fullLog.write(name, 'navigate', `Okno ${name} přešlo na ${url}`, { url }); });
-  w.on('unresponsive', () => logLine(`[${name}] unresponsive`));
+  w.on('unresponsive', () => { logLine(`[${name}] unresponsive`); if (name === 'opencode') ocHangSince = ocHangSince || Date.now(); });
+  w.on('responsive', () => { if (name === 'opencode' && ocHangSince) { logLine(`[${name}] znovu reaguje po ${Math.round((Date.now() - ocHangSince) / 1000)} s`); ocHangSince = 0; } });
   if (process.env.ZDARMA_DEBUG) {
     for (const ev of ['did-start-loading', 'dom-ready', 'did-finish-load', 'did-stop-loading']) w.webContents.on(ev, () => logLine(`[${name}] ${ev}`, w.webContents.getURL().slice(-60)));
   }
@@ -758,6 +761,54 @@ function recoverOpencode(message) {
     if (ocWin && !ocWin.isDestroyed()) { logLine('[opencode] markdown worker selhal → jednorázový reload okna'); ocWin.webContents.reload(); }
   })();
 }
+// Prázdné nebo zamrzlé okno OpenCode (uživatel 27. 11.: „neloaduje ui“ – po probuzení PC bez sítě OpenCode nedokončilo
+// start instance a web zůstal bílý; czek-ai to nepoznala). Obnova: server OpenCode odpovídá → znovu načíst okno, jinak
+// restart serveru. Nejvýš 3× za 10 min, nikdy když v OpenCode běží relace (odpověď agenta).
+let ocHangSince = 0;
+const blankFixes = [];
+async function ocServerAlive(ms = 15000) { // pomalý start projektu (velká složka) odpovídá i 6 s – restart by jen uškodil
+  if (!ocServer.url) return false;
+  try { const r = await fetch(ocServer.url.replace(/\/$/, '') + '/path', { signal: AbortSignal.timeout(ms) }); return r.ok; } catch { return false; }
+}
+async function recoverBlank(why) {
+  if (settings.ocAutoRecover === false || quitting || !ocWin || ocWin.isDestroyed()) return { ok: false, why: 'off' };
+  const now = Date.now();
+  const recent = blankFixes.filter((t) => now - t < 10 * 60000);
+  if (recent.length >= 3) { logLine('[opencode] prázdné okno: obnova přeskočena (3× za 10 min)', why); return { ok: false, why: 'limit' }; }
+  const busy = await ocServer.busy().catch(() => false);
+  if (busy) { logLine('[opencode] prázdné okno, ale běží relace → bez obnovy', why); return { ok: false, why: 'busy' }; }
+  blankFixes.splice(0, blankFixes.length, ...recent, now);
+  if (await ocServerAlive()) {
+    logLine('[opencode] prázdné okno →', why, '→ znovu načíst stránku');
+    ocWin.webContents.reload();
+    return { ok: true, action: 'reload' };
+  }
+  logLine('[opencode] prázdné okno →', why, '→ server OpenCode neodpovídá → restart');
+  await ocServer.restart();
+  if (ocWin && !ocWin.isDestroyed()) await ocWin.loadURL(ocServer.url).catch(() => {});
+  return { ok: true, action: 'restart' };
+}
+ipcMain.handle('oc:blank', async (e, d) => {
+  if (!fromOcOrBridge(e)) return null;
+  const how = d?.action === 'restart' ? 'restart' : d?.action === 'reload' ? 'reload' : 'auto';
+  if (how === 'restart') { blankFixes.push(Date.now()); logLine('[opencode] uživatel: restart OpenCode z prázdného okna'); await ocServer.restart(); if (ocWin && !ocWin.isDestroyed()) await ocWin.loadURL(ocServer.url).catch(() => {}); return { ok: true, action: 'restart' }; }
+  if (how === 'reload') { logLine('[opencode] uživatel: znovu načíst prázdné okno'); if (ocWin && !ocWin.isDestroyed()) ocWin.webContents.reload(); return { ok: true, action: 'reload' }; }
+  return recoverBlank(`prázdná stránka ${Math.round(Number(d?.seconds) || 0)} s`);
+});
+// zamrzlá stránka (renderer neodpovídá) déle než 45 s → reload; po probuzení PC kontrola, že okno něco ukazuje
+setInterval(() => { if (ocHangSince && Date.now() - ocHangSince > 45000) { ocHangSince = 0; recoverBlank('stránka neodpovídá 45 s').catch(() => {}); } }, 5000);
+app.whenReady().then(() => {
+  try {
+    powerMonitor.on('resume', () => {
+      logLine('[app] probuzení počítače → za 15 s kontrola okna OpenCode');
+      setTimeout(async () => {
+        if (!ocWin || ocWin.isDestroyed()) return;
+        const len = await Promise.race([ocWin.webContents.executeJavaScript('document.body ? document.body.innerText.trim().length : 0').catch(() => -1), new Promise((r) => setTimeout(() => r(-2), 8000))]);
+        if (len < 5) recoverBlank(len === -2 ? 'po probuzení stránka neodpovídá' : 'po probuzení prázdná stránka').catch(() => {});
+      }, 15000);
+    });
+  } catch {}
+});
 // Pád rendereru okna OpenCode: při skutečném pádu okno jednou reloadnout (relace žije na serveru), při čistém
 // konci / našem zabití (reload, konec appky) ne. Jednou za život okna, ne během ukončování.
 let ocGoneReloads = 0;

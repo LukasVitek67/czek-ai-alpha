@@ -20,9 +20,14 @@ const SECRETS = (() => {
     return Object.values(p).flat().filter((k) => typeof k === 'string' && k.length > 12).sort((a, b) => b.length - a.length);
   } catch { return []; }
 })();
+// další tajemství jen pro tento běh (např. heslo, které agent napsal do příkazu): CZEK_MASK_EXTRA="a,b" – nikdy do souboru v repu
+for (const k of String(process.env.CZEK_MASK_EXTRA || '').split(',').map((x) => x.trim()).filter((x) => x.length >= 6)) SECRETS.push(k);
+SECRETS.sort((a, b) => b.length - a.length);
 const maskSecrets = (s) => { let t = String(s); for (const k of SECRETS) if (t.includes(k)) t = t.split(k).join('<klíč>'); return t; };
 
 const mask = (s) => maskSecrets(s)
+  // přihlašovací údaje v URL (ftp://uživatel:heslo@…, https://user:token@…) – 27. 11. heslo k FTP v příkazu agenta
+  .replace(/([a-z][a-z0-9+.-]*:\/\/[^\s:/@"'<>]+:)[^\s@/"'<>]+@/gi, '$1***@')
   .replace(/sk-or-v1-[A-Za-z0-9]{16,}/g, 'sk-or-v1-***')
   .replace(/nvapi-[A-Za-z0-9_-]{16,}/g, 'nvapi-***')
   .replace(/gsk_[A-Za-z0-9]{16,}/g, 'gsk_***')

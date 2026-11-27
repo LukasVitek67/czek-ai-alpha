@@ -585,6 +585,22 @@
         "Review the API endpoints for missing authorization."
       ],
       "needs": "Report validators run on Node (bundled with czek-ai). Nothing to install."
+    },
+    "vgpu": {
+      "badge": "WebGPU",
+      "summary": "WebGPU effects by Vercel: shader hero, holographic card, liquid glass, particles",
+      "what": "The vgpu library (Vercel Labs) for WebGPU: WGSL shaders, fullscreen effects, particles, glass, fluids, 3D scenes. The skill routes the agent to the docs and examples of the installed version (vgpu docs, vgpu examples – the source of vgpu.sh/examples), so it does not invent APIs. Good for one signature effect on a site, with a fallback for browsers without WebGPU.",
+      "when": [
+        "You want a signature effect on a site: a shader hero background, a holographic card, liquid glass, a particle galaxy.",
+        "An interactive pointer or touch effect (fluid, light).",
+        "Shader tests without a GPU (vgpu/mock)."
+      ],
+      "examples": [
+        "Make a hero with a subtle WebGPU shader background using vgpu, with a fallback for older browsers.",
+        "Use the vgpu Holographic Card example for a project card in the portfolio.",
+        "Project cards as liquid glass (vgpu Liquid Layout)."
+      ],
+      "needs": "The vgpu npm package in the project (the agent adds it). WebGPU is in Chrome/Edge and newer Safari/Firefox – the site needs a fallback."
     }
   }
 }

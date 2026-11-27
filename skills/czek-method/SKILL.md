@@ -40,6 +40,7 @@ description: Always-on working method of czek-ai (how a senior engineer like Cla
 | animation in React | `motion-framer` or `react-spring-physics` |
 | scroll effects / scroll animation | `gsap-scrolltrigger`, `scroll-reveal-libraries`, `locomotive-scroll` |
 | 3D on the web | `threejs-webgl` or `react-three-fiber`; light effects `lightweight-3d-effects` |
+| WebGPU / shader effect: shader hero, holographic card, liquid glass, particles, fluid | `vgpu` |
 | 2D canvas game / graphics | `pixijs-2d` |
 | long multi-session project, remember context | `memory-bank` |
 | writing a new skill | `skill-creator` |

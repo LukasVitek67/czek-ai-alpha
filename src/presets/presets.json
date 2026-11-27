@@ -27,7 +27,8 @@
         "hallmark",
         "unslop-ui",
         "gsap-scrolltrigger",
-        "scroll-reveal-libraries"
+        "scroll-reveal-libraries",
+        "vgpu"
       ],
       "goal": "Design and build distinctive, polished marketing websites (landing pages, portfolios, company presentations): a strong visual identity, deliberate typography and spacing, responsive layout from phone to desktop, tasteful motion, accessibility and fast loading. The result must not look like a generic AI-generated template.",
       "extra": "Design must follow the loaded design skills (impeccable, unslop-ui): no gradients, no glassmorphism, no emoji used as icons, no generic template look; a single static page can be plain HTML, CSS and a little JS."
